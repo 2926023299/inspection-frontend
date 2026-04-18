@@ -1,0 +1,44 @@
+{
+    "47.98.126.186": {
+      "resultInfo": {
+        "THREAD_COUNT": "98",  //线程数
+        "THIRD_DISK_USAGE_RATE": "78.5", //第三块磁盘使用率
+        "CPU_USAGE": "53.3", //CPU使用率
+        "DISK_USAGE_RATE": "35.5", //第一块磁盘使用率
+        "IP": "47.98.126.186", //IP地址
+        "MEMORY_USAGE": "801M/1.7G", //内存使用
+        "SECOND_DISK_USAGE_RATE": "53", //第三块磁盘使用率
+        "THIRD_DISK_TOTAL": "500G", //第三块磁盘总量
+        "SECOND_DISK_USAGE": "300G/500G", //第二块磁盘使用
+        "MEMORY_TOTAL": "1.7G", //内存总量
+        "DISK_USAGE": "267G/500G", //第一块磁盘使用
+        "THIRD_DISK_USAGE": "400G/500G", //第三块磁盘使用
+        "MEMORY_USAGE_RATE": "45.615", //内存使用率
+        "JAVA_PROCESSES": "insert.jar\ncommon.jar", //Java进程
+        "DISK_TOTAL": "500G", //第一块磁盘总量
+        "SECOND_DISK_TOTAL": "500G", //第二块磁盘总量
+        "state": "0"   //0:正常, 1:异常, 2:警告
+      }
+    },
+    "47.98.126.183": {
+      "resultInfo": {
+        "THREAD_COUNT": "98",
+        "THIRD_DISK_USAGE_RATE": "78.5",
+        "CPU_USAGE": "53.3",
+        "DISK_USAGE_RATE": "35.5",
+        "IP": "47.98.126.186",
+        "MEMORY_USAGE": "801M/1.7G",
+        "SECOND_DISK_USAGE_RATE": "53",
+        "THIRD_DISK_TOTAL": "500G",
+        "SECOND_DISK_USAGE": "300G/500G",
+        "MEMORY_TOTAL": "1.7G",
+        "DISK_USAGE": "267G/500G",
+        "THIRD_DISK_USAGE": "400G/500G",
+        "MEMORY_USAGE_RATE": "45.615",
+        "JAVA_PROCESSES": "insert.jar\ncommon.jar",
+        "DISK_TOTAL": "500G",
+        "SECOND_DISK_TOTAL": "500G",
+        "state": "1"
+      }
+    }
+  }
