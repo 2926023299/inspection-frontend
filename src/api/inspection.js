@@ -1,5 +1,5 @@
 import axios from 'axios'
-import http, { apiBaseURL } from './http'
+import http, { buildRequestUrl } from './http'
 
 export function getDashboardSummary() {
   return http.get('/Inspection/dashboard')
@@ -22,7 +22,7 @@ export function runServerInspection() {
 }
 
 async function downloadInspectionFile(path, fallbackName) {
-  const response = await axios.get(`${apiBaseURL}${path}`, {
+  const response = await axios.get(buildRequestUrl(path), {
     responseType: 'blob',
     timeout: 60000,
   })

@@ -18,15 +18,16 @@ function getCityTotal(city) {
 </script>
 
 <template>
-  <div v-loading="loading" class="page-shell">
-    <section class="page-hero">
-      <h1 class="hero-title">图模巡检</h1>
-      <p class="hero-subtitle">围绕前一天中压、低压文件数量做快速汇总，保留城市粒度对比和导出能力。</p>
-      <div class="hero-actions">
+  <div v-loading="loading" class="page-shell compact-page">
+    <section class="content-panel page-toolbar">
+      <div class="page-toolbar__left">
+        <span class="page-toolbar__title">图模动作</span>
+        <div class="page-toolbar__actions">
         <el-button type="primary" :loading="actionLoading" @click="exportReport">导出图模统计</el-button>
         <el-button @click="loadSummary">刷新统计</el-button>
+        </div>
       </div>
-      <div class="meta-inline">
+      <div class="page-toolbar__meta">
         <span>统计日期：{{ summary?.date || '--' }}</span>
         <span>重点城市：{{ topCities[0]?.cityName || '--' }}</span>
         <span>总样本：{{ (summary?.zyTotal || 0) + (summary?.dyTotal || 0) }}</span>
@@ -41,8 +42,9 @@ function getCityTotal(city) {
       <MetricCard label="城市数" :value="summary?.cities?.length ?? 0" tone="success" />
     </section>
 
-    <section class="content-panel topology-layout">
-      <div>
+    <section class="content-panel compact-main-panel">
+      <div class="topology-layout">
+        <div class="topology-rank-panel">
         <div class="section-heading">
           <div>
             <h2 class="section-title">城市排行</h2>
@@ -50,7 +52,7 @@ function getCityTotal(city) {
           </div>
         </div>
 
-        <div class="city-rank-stack">
+        <div class="city-rank-stack compact-scroll-body">
           <article v-for="city in topCities" :key="city.cityCode" class="rank-card">
             <div>
               <strong>{{ city.cityName }}</strong>
@@ -67,23 +69,26 @@ function getCityTotal(city) {
         </div>
       </div>
 
-      <div>
-        <div class="section-heading">
-          <div>
-            <h2 class="section-title">明细列表</h2>
-            <p class="section-caption">逐城市查看中压 / 低压统计</p>
+        <div class="topology-table-panel">
+          <div class="section-heading">
+            <div>
+              <h2 class="section-title">明细列表</h2>
+              <p class="section-caption">逐城市查看中压 / 低压统计</p>
+            </div>
+          </div>
+
+          <div class="compact-table-shell">
+            <el-table height="100%" :data="summary?.cities || []" stripe>
+              <el-table-column prop="cityName" label="城市" min-width="120" />
+              <el-table-column prop="cityCode" label="城市编码" min-width="140" />
+              <el-table-column prop="zyCount" label="中压" width="110" />
+              <el-table-column prop="dyCount" label="低压" width="110" />
+              <el-table-column label="总量" width="120">
+                <template #default="{ row }">{{ row.zyCount + row.dyCount }}</template>
+              </el-table-column>
+            </el-table>
           </div>
         </div>
-
-        <el-table :data="summary?.cities || []" stripe>
-          <el-table-column prop="cityName" label="城市" min-width="120" />
-          <el-table-column prop="cityCode" label="城市编码" min-width="140" />
-          <el-table-column prop="zyCount" label="中压" width="110" />
-          <el-table-column prop="dyCount" label="低压" width="110" />
-          <el-table-column label="总量" width="120">
-            <template #default="{ row }">{{ row.zyCount + row.dyCount }}</template>
-          </el-table-column>
-        </el-table>
       </div>
     </section>
   </div>
@@ -92,22 +97,30 @@ function getCityTotal(city) {
 <style scoped>
 .topology-layout {
   display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 18px;
-  padding: 20px;
+  grid-template-columns: 310px minmax(0, 1fr);
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.topology-rank-panel,
+.topology-table-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .city-rank-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .rank-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px 16px;
-  padding: 16px;
+  padding: 12px 14px;
   border-radius: 18px;
   background: rgba(245, 249, 252, 0.9);
 }

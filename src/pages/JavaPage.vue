@@ -2,7 +2,6 @@
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import JavaDetailDialog from '@/components/JavaDetailDialog.vue'
-import MetricCard from '@/components/MetricCard.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useJavaInspection } from '@/composables/useJavaInspection'
 import { formatDateTime, statusOptions } from '@/utils/inspection'
@@ -36,12 +35,6 @@ const stabilityOptions = [
   { label: '变更程序', value: 'changed' },
 ]
 
-const summaryCards = computed(() => [
-  { label: '服务器数', value: summary.value.serverCount, tone: 'brand' },
-  { label: 'Java进程总数', value: summary.value.processCount, tone: 'success' },
-  { label: '发生变化', value: summary.value.changedCount, tone: 'warning' },
-])
-
 const hottestServer = computed(() => rows.value.find((row) => row.hasDiff) || rows.value[0])
 
 onMounted(() => {
@@ -51,17 +44,19 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page-shell">
-    <section class="page-hero">
-      <h1 class="hero-title">Java 进程巡检</h1>
-      <p class="hero-subtitle">按服务器聚合当前 Java 进程，并自动对比上一条历史记录，快速识别进程增减。</p>
-      <div class="hero-actions">
+  <div class="page-shell compact-page">
+    <section class="content-panel page-toolbar">
+      <div class="page-toolbar__left">
+        <span class="page-toolbar__title">Java 巡检动作</span>
+        <div class="page-toolbar__actions">
         <el-button type="primary" :loading="actionLoading" @click="exportReport">导出 Java 巡检</el-button>
         <el-button @click="router.push('/server')">返回服务器视图</el-button>
+        </div>
       </div>
-      <div class="meta-inline">
+      <div class="page-toolbar__meta">
         <span>当前服务器：{{ summary.serverCount }}</span>
         <span>总进程数：{{ summary.processCount }}</span>
+        <span>发生变化：{{ summary.changedCount }}</span>
         <span>重点关注：{{ hottestServer?.ip || '--' }}</span>
       </div>
     </section>
@@ -79,72 +74,72 @@ onMounted(() => {
       <el-button @click="resetFilters">重置</el-button>
     </section>
 
-    <section class="stats-grid">
-      <MetricCard
-        v-for="card in summaryCards"
-        :key="card.label"
-        :label="card.label"
-        :value="card.value"
-        :tone="card.tone"
-      />
-    </section>
-
     <el-alert v-if="error" type="error" :title="error" show-icon :closable="false" />
 
-    <section class="app-card-grid">
-      <article v-for="row in rows" :key="row.ip" class="glass-panel java-card" :data-state="row.status">
-        <div class="java-card-head">
-          <div>
-            <p class="java-card-time">{{ formatDateTime(row.updateTime) }}</p>
-            <h3>{{ row.ip }}</h3>
-          </div>
-          <StatusTag :status="row.status" />
+    <section class="content-panel compact-main-panel java-results-panel">
+      <div class="section-heading">
+        <div>
+          <h2 class="section-title">服务器进程清单</h2>
+          <p class="section-caption">按服务器查看当前 Java 进程、命中程序和变更情况</p>
         </div>
+      </div>
 
-        <p class="java-card-desc">{{ row.description || '暂无巡检描述' }}</p>
+      <div class="compact-table-shell">
+        <el-table v-loading="loading" height="100%" :data="rows" stripe>
+          <el-table-column prop="ip" label="服务器" min-width="150" />
+          <el-table-column label="巡检时间" min-width="170">
+            <template #default="{ row }">{{ formatDateTime(row.updateTime) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <StatusTag :status="row.status" />
+            </template>
+          </el-table-column>
+          <el-table-column label="程序概览" min-width="430">
+            <template #default="{ row }">
+              <div class="java-process-cell">
+                <div class="java-process-chip-list">
+                  <el-tag
+                    v-for="process in row.javaProcesses"
+                    :key="process"
+                    :type="row.matchedProcesses?.includes(process) ? 'danger' : 'info'"
+                    round
+                    effect="plain"
+                  >
+                    {{ process }}
+                  </el-tag>
+                  <span v-if="!row.javaProcesses.length" class="empty-process">暂无 Java 进程数据</span>
+                </div>
+                <div class="java-process-meta">
+                  <span>进程数 {{ row.javaProcessCount }}</span>
+                  <span :class="row.hasDiff ? 'status-text-warning' : 'status-text-success'">
+                    {{ row.hasDiff ? `新增 ${row.addedProcesses.length} / 移除 ${row.removedProcesses.length}` : '无变化' }}
+                  </span>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="description" label="巡检描述" min-width="220" show-overflow-tooltip />
+          <el-table-column label="操作" width="160" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" link @click="openDetail(row.ip)">查看差异</el-button>
+              <el-button link @click="router.push(`/history/${row.ip}`)">历史记录</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
-        <div class="java-card-metrics">
-          <span>进程数 {{ row.javaProcessCount }}</span>
-          <span :class="row.hasDiff ? 'status-text-warning' : 'status-text-success'">
-            {{ row.hasDiff ? '存在差异' : '无变化' }}
-          </span>
-        </div>
-
-        <div class="process-chip-list">
-          <el-tag
-            v-for="process in row.javaProcesses"
-            :key="process"
-            :type="row.matchedProcesses?.includes(process) ? 'danger' : 'info'"
-            round
-            effect="plain"
-          >
-            {{ process }}
-          </el-tag>
-          <span v-if="!row.javaProcesses.length" class="empty-process">暂无 Java 进程数据</span>
-        </div>
-
-        <div v-if="row.hasDiff" class="diff-strip">
-          <span>新增 {{ row.addedProcesses.length }}</span>
-          <span>移除 {{ row.removedProcesses.length }}</span>
-        </div>
-
-        <div class="java-card-actions">
-          <el-button type="primary" link @click="openDetail(row.ip)">查看差异</el-button>
-          <el-button link @click="router.push(`/history/${row.ip}`)">历史记录</el-button>
-        </div>
-      </article>
-    </section>
-
-    <section class="content-panel pagination-panel">
-      <el-pagination
-        :current-page="page"
-        :page-size="pageSize"
-        :page-sizes="[8, 12, 16]"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="total"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
+      <div class="compact-footer">
+        <el-pagination
+          :current-page="page"
+          :page-size="pageSize"
+          :page-sizes="[8, 12, 16]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="total"
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
+        />
+      </div>
     </section>
 
     <JavaDetailDialog
@@ -158,82 +153,46 @@ onMounted(() => {
 <style scoped>
 .filter-panel {
   display: grid;
-  grid-template-columns: 200px minmax(220px, 280px) 160px 160px auto auto;
-  gap: 12px;
+  grid-template-columns: 170px minmax(200px, 240px) 140px 140px auto auto;
+  gap: 10px;
   align-items: center;
-  padding: 18px;
+  padding: 14px 16px;
 }
 
-.pagination-panel {
-  display: flex;
-  justify-content: flex-end;
-  padding: 18px;
+.java-results-panel {
+  flex: 1;
 }
 
 .filter-input {
   width: 100%;
 }
 
-.java-card {
-  padding: 20px;
-}
-
-.java-card[data-state="1"] {
-  box-shadow: 0 18px 38px rgba(185, 134, 44, 0.14);
-}
-
-.java-card[data-state="2"] {
-  box-shadow: 0 18px 38px rgba(188, 75, 61, 0.16);
-}
-
-.java-card-head,
-.java-card-actions,
-.diff-strip {
+.java-process-cell,
+.java-process-chip-list {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.java-card-time,
-.java-card-desc,
 .empty-process {
   color: var(--text-subtle);
 }
 
-.java-card h3 {
-  margin: 8px 0 0;
-  font-size: 24px;
-}
-
-.java-card-desc {
-  min-height: 42px;
-  line-height: 1.7;
-}
-
-.java-card-metrics {
+.java-process-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 14px;
-  font-size: 13px;
+  gap: 10px;
+  font-size: 12px;
 }
 
-.process-chip-list {
+.java-process-chip-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  min-height: 70px;
-  padding: 14px 0;
+  gap: 7px;
+  align-items: center;
 }
 
-.diff-strip {
-  margin-bottom: 12px;
-  color: var(--text-subtle);
-  font-size: 13px;
-}
-
-:deep(.process-chip-list .el-tag) {
+:deep(.java-process-chip-list .el-tag) {
   border-radius: 999px;
   padding-inline: 10px;
 }

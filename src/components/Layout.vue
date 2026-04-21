@@ -1,14 +1,18 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getApiBaseLabel } from '@/api/http'
 import TabView from '@/components/TabView.vue'
 
 const route = useRoute()
 const router = useRouter()
+const sidebarCollapsed = ref(false)
+const backendLabel = computed(() => getApiBaseLabel())
 
 const menuItems = [
   { path: '/dashboard', title: '巡检工作台', caption: '总览与入口' },
   { path: '/server', title: '服务器巡检', caption: '资源与异常' },
+  { path: '/connect', title: '服务器连接', caption: '终端与文件' },
   { path: '/java', title: 'Java巡检', caption: '进程与差异' },
   { path: '/topology', title: '图模巡检', caption: '中压/低压统计' },
 ]
@@ -32,35 +36,47 @@ const currentDateLabel = new Intl.DateTimeFormat('zh-CN', {
   weekday: 'short',
 }).format(new Date())
 
+onMounted(() => {
+  sidebarCollapsed.value = window.localStorage.getItem('layout-sidebar-collapsed') === 'true'
+})
+
+watch(sidebarCollapsed, (collapsed) => {
+  window.localStorage.setItem('layout-sidebar-collapsed', String(collapsed))
+})
+
 function navigate(path) {
   if (path !== route.path) {
     router.push(path)
   }
 }
+
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
 </script>
 
 <template>
-  <div class="layout-shell">
-    <aside class="layout-sidebar glass-panel">
+  <div class="layout-shell" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
+    <aside class="layout-sidebar glass-panel" :class="{ 'is-collapsed': sidebarCollapsed }">
       <div class="brand-block">
         <div class="brand-row">
           <div class="brand-emblem">IO</div>
           <div>
-            <span class="brand-chip">OPS INSPECTION</span>
-            <h1>设备巡检系统</h1>
+            <span v-if="!sidebarCollapsed" class="brand-chip">OPS INSPECTION</span>
+            <h1>{{ sidebarCollapsed ? '巡检' : '设备巡检系统' }}</h1>
           </div>
         </div>
-        <p>把资源、Java 进程和图模统计收敛到一套工作台里。</p>
+        <p v-if="!sidebarCollapsed">把资源、Java 进程和图模统计收敛到一套工作台里。</p>
       </div>
 
-      <div class="rail-meta">
+      <div v-if="!sidebarCollapsed" class="rail-meta">
         <div class="rail-meta-card">
           <span>值班日期</span>
           <strong>{{ currentDateLabel }}</strong>
         </div>
         <div class="rail-meta-card">
           <span>联调后端</span>
-          <strong>localhost:8090</strong>
+          <strong>{{ backendLabel }}</strong>
         </div>
       </div>
 
@@ -74,14 +90,18 @@ function navigate(path) {
           @click="navigate(item.path)"
         >
           <span class="menu-index">{{ String(index + 1).padStart(2, '0') }}</span>
-          <div class="menu-copy">
+          <div v-if="!sidebarCollapsed" class="menu-copy">
             <strong>{{ item.title }}</strong>
             <span>{{ item.caption }}</span>
           </div>
         </button>
       </nav>
 
-      <footer class="sidebar-footer">
+      <button type="button" class="sidebar-toggle" @click="toggleSidebar">
+        {{ sidebarCollapsed ? '展开' : '收起' }}
+      </button>
+
+      <footer v-if="!sidebarCollapsed" class="sidebar-footer">
         <span class="sidebar-footer__label">Current Surface</span>
         <strong class="sidebar-footer__value">{{ routeTitle }}</strong>
       </footer>
@@ -119,38 +139,54 @@ function navigate(path) {
 <style scoped>
 .layout-shell {
   display: grid;
-  grid-template-columns: 316px minmax(0, 1fr);
-  min-height: 100vh;
-  gap: 20px;
-  padding: 20px;
+  grid-template-columns: 284px minmax(0, 1fr);
+  height: 100vh;
+  gap: 14px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.layout-shell.is-sidebar-collapsed {
+  grid-template-columns: 88px minmax(0, 1fr);
 }
 
 .layout-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 28px 24px 22px;
+  gap: 16px;
+  padding: 18px 16px 16px;
   background: var(--rail-bg);
   color: #f5efe7;
+  min-height: 0;
+}
+
+.layout-sidebar.is-collapsed {
+  padding: 16px 10px 14px;
+  align-items: center;
 }
 
 .brand-row {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
+}
+
+.layout-sidebar.is-collapsed .brand-row {
+  grid-template-columns: 1fr;
+  justify-items: center;
 }
 
 .brand-emblem {
   display: grid;
   place-items: center;
-  width: 68px;
-  height: 68px;
-  border-radius: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background:
     linear-gradient(135deg, rgba(195, 95, 55, 0.34), rgba(255, 255, 255, 0.06));
-  font-size: 24px;
+  font-size: 19px;
   font-weight: 800;
   letter-spacing: 0.12em;
 }
@@ -159,7 +195,7 @@ function navigate(path) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
@@ -169,22 +205,28 @@ function navigate(path) {
 }
 
 .brand-block h1 {
-  margin: 12px 0 0;
-  font-size: 30px;
+  margin: 10px 0 0;
+  font-size: 24px;
   line-height: 0.98;
   letter-spacing: 0.08em;
 }
 
+.layout-sidebar.is-collapsed .brand-block h1 {
+  margin-top: 8px;
+  font-size: 14px;
+  text-align: center;
+}
+
 .brand-block p {
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   color: rgba(245, 239, 231, 0.68);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .rail-meta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .rail-meta-card,
@@ -198,8 +240,8 @@ function navigate(path) {
 .rail-meta-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 14px;
+  gap: 4px;
+  padding: 10px 12px;
 }
 
 .rail-meta-card span,
@@ -219,15 +261,16 @@ function navigate(path) {
 .menu-stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
 }
 
 .menu-item {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
-  padding: 16px 18px;
+  padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.02);
@@ -236,9 +279,15 @@ function navigate(path) {
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 
+.layout-sidebar.is-collapsed .menu-item {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  padding: 12px 8px;
+}
+
 .menu-index {
   color: rgba(245, 239, 231, 0.36);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1;
 }
@@ -246,16 +295,17 @@ function navigate(path) {
 .menu-copy {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .menu-copy strong {
   letter-spacing: 0.06em;
+  font-size: 13px;
 }
 
 .menu-copy span {
   color: rgba(245, 239, 231, 0.56);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .menu-item:hover,
@@ -270,67 +320,83 @@ function navigate(path) {
   color: #f5efe7;
 }
 
+.sidebar-toggle {
+  width: 100%;
+  margin-top: auto;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: var(--rail-surface);
+  color: rgba(245, 239, 231, 0.88);
+}
+
 .sidebar-footer {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
+  gap: 6px;
+  padding: 12px;
 }
 
 .layout-main {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .layout-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 22px 26px;
+  gap: 14px;
+  padding: 10px 14px;
 }
 
 .header-kicker {
-  margin: 0 0 10px;
+  margin: 0 0 2px;
   color: var(--brand);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
 }
 
 .header-title {
-  margin: 12px 0 0;
-  font-size: 28px;
-  letter-spacing: 0.08em;
+  margin: 4px 0 0;
+  font-size: 16px;
+  letter-spacing: 0.04em;
 }
 
 .header-status {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 4px;
   color: var(--text-subtle);
-  font-size: 12px;
-  padding: 10px 14px;
-  border-radius: 16px;
+  font-size: 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
   background: rgba(195, 95, 55, 0.08);
 }
 
 .header-status strong {
   color: var(--text-main);
-  font-size: 15px;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
 .layout-content {
+  flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 1100px) {
   .layout-shell {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
   }
 
   .layout-sidebar {

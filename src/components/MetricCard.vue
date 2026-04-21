@@ -54,10 +54,10 @@ const props = defineProps({
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-height: 162px;
-  padding: 24px 24px 22px;
-  border-radius: 22px;
+  gap: 10px;
+  min-height: 112px;
+  padding: 16px 16px 14px;
+  border-radius: 18px;
   border: 1px solid rgba(30, 42, 51, 0.1);
   background:
     linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(250, 245, 237, 0.92));
@@ -70,18 +70,18 @@ const props = defineProps({
   position: absolute;
   inset: auto auto 0 0;
   width: 100%;
-  height: 6px;
+  height: 4px;
   background: linear-gradient(90deg, var(--brand), rgba(195, 95, 55, 0.08));
 }
 
 .metric-card::before {
   content: "";
   position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
+  top: 12px;
+  right: 12px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   transform: rotate(12deg);
   background: rgba(195, 95, 55, 0.08);
 }
@@ -125,11 +125,11 @@ const props = defineProps({
 }
 
 .metric-signal {
-  width: 12px;
-  height: 12px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--brand);
-  box-shadow: 0 0 0 6px rgba(195, 95, 55, 0.12);
+  box-shadow: 0 0 0 4px rgba(195, 95, 55, 0.12);
 }
 
 .metric-card[data-tone="success"] .metric-signal {
@@ -149,22 +149,22 @@ const props = defineProps({
 
 .metric-label {
   color: var(--text-subtle);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .metric-value {
-  font-size: 40px;
+  font-size: 28px;
   line-height: 1;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 .metric-caption {
   color: var(--text-subtle);
-  font-size: 12px;
-  max-width: 18ch;
+  font-size: 11px;
+  max-width: 22ch;
 }
 
 .metric-card[data-interactive="true"] {
@@ -172,13 +172,13 @@ const props = defineProps({
 }
 
 .metric-card[data-interactive="true"]:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   border-color: rgba(195, 95, 55, 0.3);
   box-shadow: 0 20px 40px rgba(52, 47, 39, 0.18);
 }
 
 .metric-card[data-active="true"] {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   border-color: rgba(195, 95, 55, 0.48);
   box-shadow:
     0 24px 46px rgba(52, 47, 39, 0.2),

@@ -8,6 +8,7 @@ const router = useRouter()
 const fixedTabs = [
   { name: 'Dashboard', path: '/dashboard', title: '工作台', closable: false },
   { name: 'ServerPage', path: '/server', title: '服务器巡检', closable: false },
+  { name: 'ServerConnectPage', path: '/connect', title: '服务器连接', closable: false },
   { name: 'JavaPage', path: '/java', title: 'Java巡检', closable: false },
   { name: 'TopologyPage', path: '/topology', title: '图模巡检', closable: false },
 ]
@@ -89,8 +90,8 @@ function removeTab(path) {
 }
 
 :deep(.el-tabs__nav-scroll) {
-  padding: 8px;
-  border-radius: 18px;
+  padding: 6px;
+  border-radius: 16px;
   background: rgba(250, 246, 238, 0.72);
   border: 1px solid rgba(30, 42, 51, 0.08);
 }
@@ -100,11 +101,12 @@ function removeTab(path) {
 }
 
 :deep(.el-tabs__item) {
-  height: 42px;
+  height: 36px;
   border: none !important;
-  border-radius: 14px;
+  border-radius: 12px;
   color: var(--text-subtle);
   font-weight: 700;
+  font-size: 12px;
   letter-spacing: 0.05em;
 }
 

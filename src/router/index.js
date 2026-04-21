@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/components/Layout.vue'
 import ServerPage from '@/pages/ServerPage.vue'
 import JavaPage from '@/pages/JavaPage.vue'
+import ServerConnectPage from '@/pages/ServerConnectPage.vue'
 import TupoPage from '@/pages/TupoPage.vue'
 import RootPage from '@/pages/root.vue'
 
@@ -34,6 +35,17 @@ const routes = [
           menuKey: '/server',
           keepAlive: true,
           breadcrumb: ['服务器巡检'],
+        },
+      },
+      {
+        path: 'connect',
+        name: 'ServerConnectPage',
+        component: ServerConnectPage,
+        meta: {
+          title: '服务器连接',
+          tabTitle: '服务器连接',
+          menuKey: '/connect',
+          breadcrumb: ['服务器连接'],
         },
       },
       {

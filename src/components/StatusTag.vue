@@ -23,23 +23,23 @@ const statusMeta = computed(() => getStatusMeta(props.status))
 .status-tag {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
+  gap: 6px;
+  padding: 5px 10px;
   border-radius: 999px;
   border: 1px solid rgba(30, 42, 51, 0.1);
   background: rgba(255, 252, 247, 0.9);
   color: var(--text-main);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--brand);
-  box-shadow: 0 0 0 4px rgba(195, 95, 55, 0.12);
+  box-shadow: 0 0 0 3px rgba(195, 95, 55, 0.12);
 }
 
 .status-tag[data-tone="success"] {

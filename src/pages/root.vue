@@ -44,15 +44,6 @@ const peakCards = computed(() => {
   ]
 })
 
-const boardRows = computed(() => {
-  const data = dashboard.value || {}
-  return [
-    { label: '重点设备', value: data.cpuPeak?.ip || '--', hint: '资源峰值来源' },
-    { label: '最后巡检', value: data.lastInspectionTime || '--', hint: '当前概览基线' },
-    { label: '变化服务器', value: data.javaChangedServerCount ?? 0, hint: 'Java 进程差异' },
-  ]
-})
-
 onMounted(loadDashboard)
 
 function openServerList(query = {}) {
@@ -68,40 +59,22 @@ function getStatCardQuery(label) {
 </script>
 
 <template>
-  <div v-loading="loading" class="page-shell">
-    <section class="page-hero dashboard-hero">
-      <div class="dashboard-hero-grid">
-        <div>
-          <h1 class="hero-title">巡检工作台</h1>
-          <p class="hero-subtitle">
-            面向值班、排障和导出交付的巡检面板。把服务器资源、Java 进程变化和图模统计压缩到一条可执行工作流里。
-          </p>
-          <div class="hero-actions">
-            <el-button type="primary" :loading="actionLoading" @click="triggerInspection">立即巡检</el-button>
-            <el-button :loading="actionLoading" @click="exportReport">导出服务器结果</el-button>
-            <el-button @click="router.push('/server')">进入服务器巡检</el-button>
-            <el-button @click="router.push('/java')">进入 Java 巡检</el-button>
-          </div>
-          <div class="meta-inline">
-            <span>最近巡检：{{ dashboard?.lastInspectionTime || '--' }}</span>
-            <span>Java 变化服务器：{{ dashboard?.javaChangedServerCount ?? 0 }}</span>
-            <span>图模日期：{{ dashboard?.topology?.date || '--' }}</span>
-          </div>
+  <div v-loading="loading" class="page-shell compact-page">
+    <section class="content-panel page-toolbar">
+      <div class="page-toolbar__left">
+        <span class="page-toolbar__title">值班动作</span>
+        <div class="page-toolbar__actions">
+        <el-button type="primary" :loading="actionLoading" @click="triggerInspection">立即巡检</el-button>
+        <el-button :loading="actionLoading" @click="exportReport">导出服务器结果</el-button>
+        <el-button @click="router.push('/server')">进入服务器巡检</el-button>
+        <el-button @click="router.push('/java')">进入 Java 巡检</el-button>
         </div>
-
-        <div class="signal-board">
-          <div class="signal-board__head">
-            <span>值班摘要</span>
-            <strong>Live Board</strong>
-          </div>
-          <div class="signal-board__body">
-            <article v-for="item in boardRows" :key="item.label" class="signal-row">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-              <small>{{ item.hint }}</small>
-            </article>
-          </div>
-        </div>
+      </div>
+      <div class="page-toolbar__meta">
+        <span>最近巡检：{{ dashboard?.lastInspectionTime || '--' }}</span>
+        <span>重点设备：{{ dashboard?.cpuPeak?.ip || '--' }}</span>
+        <span>Java 变化服务器：{{ dashboard?.javaChangedServerCount ?? 0 }}</span>
+        <span>图模日期：{{ dashboard?.topology?.date || '--' }}</span>
       </div>
     </section>
 
@@ -119,139 +92,150 @@ function getStatCardQuery(label) {
       />
     </section>
 
-    <section class="content-panel dashboard-grid">
-      <div class="dashboard-column">
+    <section class="dashboard-panel-grid">
+      <section class="content-panel compact-main-panel dashboard-focus-panel">
         <div class="section-heading">
           <div>
-            <h2 class="section-title">资源峰值</h2>
-            <p class="section-caption">用最高占用快速定位风险服务器</p>
+            <h2 class="section-title">资源峰值定位</h2>
+            <p class="section-caption">直接定位 CPU、内存、磁盘最高占用服务器</p>
           </div>
         </div>
-        <div class="app-card-grid">
-          <MetricCard
+
+        <div class="focus-list compact-scroll-body">
+          <button
             v-for="card in peakCards"
             :key="card.label"
-            :label="card.label"
-            :value="card.value"
-            :caption="card.caption"
-            :tone="card.tone"
-            :interactive="Boolean(card.query)"
+            type="button"
+            class="focus-row"
+            :data-tone="card.tone"
             @click="card.query && openServerList(card.query)"
-          />
+          >
+            <div class="focus-row__main">
+              <span class="focus-row__label">{{ card.label }}</span>
+              <strong class="focus-row__value">{{ card.value }}</strong>
+            </div>
+            <div class="focus-row__meta">
+              <strong>{{ card.caption }}</strong>
+              <span>点击定位到服务器巡检</span>
+            </div>
+          </button>
         </div>
-      </div>
+      </section>
 
-      <div class="dashboard-column">
+      <section class="content-panel compact-main-panel dashboard-topology-panel">
         <div class="section-heading">
           <div>
             <h2 class="section-title">图模摘要</h2>
-            <p class="section-caption">前一天中压 / 低压城市统计</p>
+            <p class="section-caption">前一天中压 / 低压统计和重点城市</p>
           </div>
           <el-button text @click="router.push('/topology')">查看明细</el-button>
         </div>
 
-        <div class="topology-quicklook">
-          <article>
-            <span>中压总量</span>
-            <strong>{{ dashboard?.topology?.zyTotal ?? 0 }}</strong>
-          </article>
-          <article>
-            <span>低压总量</span>
-            <strong>{{ dashboard?.topology?.dyTotal ?? 0 }}</strong>
-          </article>
-        </div>
+        <div class="topology-body compact-scroll-body">
+          <div class="topology-quicklook">
+            <article>
+              <span>中压总量</span>
+              <strong>{{ dashboard?.topology?.zyTotal ?? 0 }}</strong>
+            </article>
+            <article>
+              <span>低压总量</span>
+              <strong>{{ dashboard?.topology?.dyTotal ?? 0 }}</strong>
+            </article>
+          </div>
 
-        <div class="city-preview">
-          <div v-for="city in dashboard?.topology?.cities?.slice(0, 4) || []" :key="city.cityCode" class="city-preview-row">
-            <strong>{{ city.cityName }}</strong>
-            <span>中压 {{ city.zyCount }}</span>
-            <span>低压 {{ city.dyCount }}</span>
+          <div class="city-preview">
+            <div v-for="city in dashboard?.topology?.cities?.slice(0, 6) || []" :key="city.cityCode" class="city-preview-row">
+              <strong>{{ city.cityName }}</strong>
+              <span>中压 {{ city.zyCount }}</span>
+              <span>低压 {{ city.dyCount }}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </section>
   </div>
 </template>
 
 <style scoped>
-.dashboard-hero {
-  padding-bottom: 34px;
-}
-
-.dashboard-hero-grid {
-  position: relative;
-  z-index: 1;
+.dashboard-panel-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) 320px;
-  gap: 24px;
-  align-items: end;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
 }
 
-.signal-board {
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(18px);
+.dashboard-focus-panel,
+.dashboard-topology-panel {
+  min-height: 0;
 }
 
-.signal-board__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(246, 239, 229, 0.68);
-}
-
-.signal-board__body {
+.focus-list,
+.topology-body {
   display: flex;
   flex-direction: column;
+  gap: 10px;
 }
 
-.signal-row {
+.focus-row {
   display: grid;
-  gap: 6px;
-  padding: 16px 18px;
+  grid-template-columns: 160px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 42, 51, 0.08);
+  background: rgba(255, 252, 247, 0.92);
+  text-align: left;
+  box-shadow: 0 12px 28px rgba(52, 47, 39, 0.08);
 }
 
-.signal-row + .signal-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+.focus-row[data-tone='danger'] {
+  border-left: 4px solid var(--danger);
 }
 
-.signal-row span,
-.signal-row small {
-  color: rgba(246, 239, 229, 0.68);
+.focus-row[data-tone='warning'] {
+  border-left: 4px solid var(--warning);
 }
 
-.signal-row strong {
-  font-size: 20px;
-  letter-spacing: 0.05em;
+.focus-row[data-tone='brand'] {
+  border-left: 4px solid var(--brand);
 }
 
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 18px;
-  padding: 22px;
+.focus-row__main,
+.focus-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.dashboard-column {
-  min-width: 0;
+.focus-row__label,
+.focus-row__meta span {
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.focus-row__value {
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.focus-row__meta strong {
+  font-size: 16px;
+  color: var(--text-main);
 }
 
 .topology-quicklook {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .topology-quicklook article,
 .city-preview-row {
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(245, 249, 252, 0.9);
   border: 1px solid rgba(22, 33, 49, 0.08);
 }
@@ -259,8 +243,8 @@ function getStatCardQuery(label) {
 .topology-quicklook article {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px;
+  gap: 6px;
+  padding: 14px;
 }
 
 .topology-quicklook span,
@@ -269,14 +253,13 @@ function getStatCardQuery(label) {
 }
 
 .topology-quicklook strong {
-  font-size: 30px;
+  font-size: 24px;
 }
 
 .city-preview {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
 }
 
 .city-preview-row {
@@ -284,12 +267,15 @@ function getStatCardQuery(label) {
   grid-template-columns: 1.2fr 1fr 1fr;
   gap: 12px;
   align-items: center;
-  padding: 14px 16px;
+  padding: 12px 14px;
 }
 
 @media (max-width: 1000px) {
-  .dashboard-hero-grid,
-  .dashboard-grid {
+  .dashboard-panel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .focus-row {
     grid-template-columns: 1fr;
   }
 }

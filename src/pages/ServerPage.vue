@@ -90,6 +90,10 @@ const focusMetricLabel = computed(() => {
 })
 
 function isCardActive(cardQuery = {}) {
+  if (!cardQuery) {
+    return false
+  }
+
   const routeStatus = normalizeQueryValue(route.query.status)
   const routeIp = normalizeQueryValue(route.query.ip)
   const routeMetric = normalizeQueryValue(route.query.metric)
@@ -113,6 +117,7 @@ function normalizeQueryValue(value) {
 }
 
 function getRowClassName({ row }) {
+  if (!row) return ''
   if (row.status === 2) return 'table-row-danger'
   if (row.status === 1) return 'table-row-warning'
   return ''
@@ -212,15 +217,16 @@ watch(
 </script>
 
 <template>
-  <div class="page-shell">
-    <section class="page-hero">
-      <h1 class="hero-title">服务器资源巡检</h1>
-      <p class="hero-subtitle">以最近一次巡检结果为视图基线，支持筛选、详情、历史追踪和手动重跑。</p>
-      <div class="hero-actions">
+  <div class="page-shell compact-page">
+    <section class="content-panel page-toolbar">
+      <div class="page-toolbar__left">
+        <span class="page-toolbar__title">巡检动作</span>
+        <div class="page-toolbar__actions">
         <el-button type="primary" :loading="actionLoading" @click="triggerInspection">立即巡检</el-button>
         <el-button :loading="actionLoading" @click="exportReport">导出结果</el-button>
+        </div>
       </div>
-      <div class="meta-inline">
+      <div class="page-toolbar__meta">
         <span>当前命中：{{ total }} 台</span>
         <span>重点设备：{{ focusRecord?.ip || '--' }}</span>
         <span>{{ focusMetricLabel }}：{{ focusRecord?.description || '--' }}</span>
@@ -260,7 +266,7 @@ watch(
 
     <el-alert v-if="error" type="error" :title="error" show-icon :closable="false" />
 
-    <section class="content-panel table-panel">
+    <section class="content-panel compact-main-panel table-panel">
       <div class="section-heading">
         <div>
           <h2 class="section-title">巡检列表</h2>
@@ -268,38 +274,40 @@ watch(
         </div>
       </div>
 
-      <el-table v-loading="loading" :data="rows" stripe :row-class-name="getRowClassName">
-        <el-table-column prop="ip" label="IP" min-width="150" />
-        <el-table-column label="巡检时间" min-width="180">
-          <template #default="{ row }">{{ formatDateTime(row.updateTime) }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="110">
-          <template #default="{ row }">
-            <StatusTag :status="row.status" />
-          </template>
-        </el-table-column>
-        <el-table-column label="CPU" width="110">
-          <template #default="{ row }">{{ formatPercent(row.cpuUsage) }}</template>
-        </el-table-column>
-        <el-table-column label="内存" min-width="150">
-          <template #default="{ row }">{{ buildUsageText(row.memoryUsage, row.memoryTotal) }}</template>
-        </el-table-column>
-        <el-table-column label="磁盘最高占用" width="130">
-          <template #default="{ row }">
-            {{ formatPercent(Math.max(Number(row.diskUsageRate || 0), Number(row.secondDiskUsageRate || 0), Number(row.thirdDiskUsageRate || 0))) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="javaProcessCount" label="Java进程数" width="120" />
-        <el-table-column prop="description" label="巡检描述" min-width="240" show-overflow-tooltip />
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button link @click="router.push(`/history/${row.ip}`)">历史</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="compact-table-shell">
+        <el-table v-loading="loading" height="100%" :data="rows" stripe :row-class-name="getRowClassName">
+          <el-table-column prop="ip" label="IP" min-width="150" />
+          <el-table-column label="巡检时间" min-width="180">
+            <template #default="{ row }">{{ formatDateTime(row.updateTime) }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="110">
+            <template #default="{ row }">
+              <StatusTag :status="row.status" />
+            </template>
+          </el-table-column>
+          <el-table-column label="CPU" width="110">
+            <template #default="{ row }">{{ formatPercent(row.cpuUsage) }}</template>
+          </el-table-column>
+          <el-table-column label="内存" min-width="150">
+            <template #default="{ row }">{{ buildUsageText(row.memoryUsage, row.memoryTotal) }}</template>
+          </el-table-column>
+          <el-table-column label="磁盘最高占用" width="130">
+            <template #default="{ row }">
+              {{ formatPercent(Math.max(Number(row.diskUsageRate || 0), Number(row.secondDiskUsageRate || 0), Number(row.thirdDiskUsageRate || 0))) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="javaProcessCount" label="Java进程数" width="120" />
+          <el-table-column prop="description" label="巡检描述" min-width="240" show-overflow-tooltip />
+          <el-table-column label="操作" width="180" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+              <el-button link @click="router.push(`/history/${row.ip}`)">历史</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
-      <div class="pagination-row">
+      <div class="compact-footer">
         <el-pagination
           :current-page="page"
           :page-size="pageSize"
@@ -323,9 +331,9 @@ watch(
 <style scoped>
 .filter-panel {
   display: grid;
-  grid-template-columns: 220px 220px 180px auto auto;
-  gap: 12px;
-  padding: 18px;
+  grid-template-columns: 180px 180px 150px auto auto;
+  gap: 10px;
+  padding: 14px 16px;
 }
 
 .filter-input {
@@ -333,13 +341,7 @@ watch(
 }
 
 .table-panel {
-  padding: 20px;
-}
-
-.pagination-row {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 18px;
+  flex: 1;
 }
 
 :deep(.table-row-warning td:first-child) {

@@ -1,7 +1,44 @@
 import axios from 'axios'
 
-export const apiBaseURL =
-  import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:8091' : '')
+const envApiBaseURL = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || ''
+
+export const apiBaseURL = envApiBaseURL || (import.meta.env.DEV ? 'http://localhost:8091' : '')
+
+function normalizePath(path) {
+  return path.startsWith('/') ? path : `/${path}`
+}
+
+export function buildRequestUrl(path) {
+  const normalizedPath = normalizePath(path)
+  return apiBaseURL ? `${apiBaseURL}${normalizedPath}` : normalizedPath
+}
+
+export function buildWebSocketUrl(path) {
+  const normalizedPath = normalizePath(path)
+
+  if (apiBaseURL) {
+    return `${apiBaseURL.replace(/^http/i, 'ws')}${normalizedPath}`
+  }
+
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}${normalizedPath}`
+  }
+
+  return normalizedPath
+}
+
+export function getApiBaseLabel() {
+  if (apiBaseURL) {
+    return apiBaseURL.replace(/^https?:\/\//, '')
+  }
+
+  if (typeof window !== 'undefined') {
+    return window.location.host
+  }
+
+  return 'same-origin'
+}
 
 const http = axios.create({
   baseURL: apiBaseURL,
