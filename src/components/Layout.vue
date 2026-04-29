@@ -13,6 +13,7 @@ const menuItems = [
   { path: '/dashboard', title: '巡检工作台', caption: '总览与入口' },
   { path: '/server', title: '服务器巡检', caption: '资源与异常' },
   { path: '/connect', title: '服务器连接', caption: '终端与文件' },
+  { path: '/mysql', title: 'MySQL工作台', caption: '数据与结构' },
   { path: '/java', title: 'Java巡检', caption: '进程与差异' },
   { path: '/topology', title: '图模巡检', caption: '中压/低压统计' },
 ]

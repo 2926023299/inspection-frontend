@@ -1,0 +1,57 @@
+import http from './http'
+
+export function listMysqlWorkbenchTree(includeSystemSchemas = false) {
+  return http.get('/mysql-workbench/tree', {
+    params: { includeSystemSchemas },
+  })
+}
+
+export function getMysqlTableMetadata(schema, table) {
+  return http.get('/mysql-workbench/table/metadata', {
+    params: { schema, table },
+  })
+}
+
+export function getMysqlTableDdl(schema, table) {
+  return http.get('/mysql-workbench/table/ddl', {
+    params: { schema, table },
+  })
+}
+
+export function queryMysqlTableData(payload) {
+  return http.post('/mysql-workbench/table/data/query', payload)
+}
+
+export function insertMysqlTableRow(payload) {
+  return http.post('/mysql-workbench/table/data/insert', payload)
+}
+
+export function updateMysqlTableRow(payload) {
+  return http.put('/mysql-workbench/table/data/update', payload)
+}
+
+export function deleteMysqlTableRow(payload) {
+  return http.delete('/mysql-workbench/table/data/delete', {
+    data: payload,
+  })
+}
+
+export function previewMysqlTableDesign(payload) {
+  return http.post('/mysql-workbench/design/preview', payload)
+}
+
+export function executeMysqlTableDesign(payload) {
+  return http.post('/mysql-workbench/design/execute', payload)
+}
+
+export function executeMysqlSqlBatch(payload) {
+  return http.post('/mysql-workbench/sql/execute', payload)
+}
+
+export function listMysqlQueryHistory(params = {}) {
+  return http.get('/mysql-workbench/history', { params })
+}
+
+export function getMysqlQueryHistoryDetail(batchId) {
+  return http.get(`/mysql-workbench/history/${batchId}`)
+}

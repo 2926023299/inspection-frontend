@@ -13,6 +13,7 @@ const fixedTabs = [
   { name: 'Dashboard', path: '/dashboard', title: '工作台', closable: false },
   { name: 'ServerPage', path: '/server', title: '服务器巡检', closable: false },
   { name: 'ServerConnectPage', path: '/connect', title: '服务器连接', closable: false },
+  { name: 'MysqlWorkbenchPage', path: '/mysql', title: 'MySQL工作台', closable: false },
   { name: 'JavaPage', path: '/java', title: 'Java巡检', closable: false },
   { name: 'TopologyPage', path: '/topology', title: '图模巡检', closable: false },
 ]

@@ -6,6 +6,7 @@ import Layout from '@/components/Layout.vue'
 import ServerPage from '@/pages/ServerPage.vue'
 import JavaPage from '@/pages/JavaPage.vue'
 import ServerConnectPage from '@/pages/ServerConnectPage.vue'
+import MysqlWorkbenchPage from '@/pages/MysqlWorkbenchPage.vue'
 import TupoPage from '@/pages/TupoPage.vue'
 import RootPage from '@/pages/root.vue'
 import LoginPage from '@/pages/LoginPage.vue'
@@ -77,6 +78,17 @@ const routes = [
           tabTitle: '服务器连接',
           menuKey: '/connect',
           breadcrumb: ['服务器连接'],
+        },
+      },
+      {
+        path: 'mysql',
+        name: 'MysqlWorkbenchPage',
+        component: MysqlWorkbenchPage,
+        meta: {
+          title: 'MySQL工作台',
+          tabTitle: 'MySQL工作台',
+          menuKey: '/mysql',
+          breadcrumb: ['MySQL工作台'],
         },
       },
       {
