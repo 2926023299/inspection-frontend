@@ -1,0 +1,7 @@
+{
+  "url": "http://localhost:5173/inspection/server",
+  "hasRemovedHeader": true,
+  "logoutInTabBar": true,
+  "mergedToolbar": true,
+  "success": true
+}

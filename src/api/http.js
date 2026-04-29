@@ -1,8 +1,11 @@
 import axios from 'axios'
 
 const envApiBaseURL = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || ''
+let unauthorizedHandler = null
 
 export const apiBaseURL = envApiBaseURL || (import.meta.env.DEV ? 'http://localhost:8091' : '')
+
+axios.defaults.withCredentials = true
 
 function normalizePath(path) {
   return path.startsWith('/') ? path : `/${path}`
@@ -40,9 +43,24 @@ export function getApiBaseLabel() {
   return 'same-origin'
 }
 
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = typeof handler === 'function' ? handler : null
+}
+
+export function createRequestError(message, code) {
+  const error = new Error(message)
+  error.code = code
+  return error
+}
+
+export function notifyUnauthorized(message = '需要登录后操作') {
+  unauthorizedHandler?.(createRequestError(message, 1))
+}
+
 const http = axios.create({
   baseURL: apiBaseURL,
   timeout: 15000,
+  withCredentials: true,
 })
 
 http.interceptors.response.use(
@@ -51,7 +69,11 @@ http.interceptors.response.use(
 
     if (payload && Object.prototype.hasOwnProperty.call(payload, 'code') && payload.code !== 200) {
       const message = payload.otherMessage || payload.errorMessage || '请求失败'
-      return Promise.reject(new Error(message))
+      const error = createRequestError(message, payload.code)
+      if (payload.code === 1 && !response.config?.skipAuthRedirect) {
+        unauthorizedHandler?.(error)
+      }
+      return Promise.reject(error)
     }
 
     if (payload && Object.prototype.hasOwnProperty.call(payload, 'data')) {
@@ -61,8 +83,13 @@ http.interceptors.response.use(
     return payload
   },
   (error) => {
+    const code = error?.response?.data?.code
     const message = error?.response?.data?.otherMessage || error?.response?.data?.errorMessage || error.message || '网络请求失败'
-    return Promise.reject(new Error(message))
+    const normalizedError = createRequestError(message, code)
+    if (code === 1 && !error?.config?.skipAuthRedirect) {
+      unauthorizedHandler?.(normalizedError)
+    }
+    return Promise.reject(normalizedError)
   },
 )
 

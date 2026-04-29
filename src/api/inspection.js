@@ -1,5 +1,5 @@
 import axios from 'axios'
-import http, { buildRequestUrl } from './http'
+import http, { buildRequestUrl, createRequestError, notifyUnauthorized } from './http'
 
 export function getDashboardSummary() {
   return http.get('/Inspection/dashboard')
@@ -25,7 +25,18 @@ async function downloadInspectionFile(path, fallbackName) {
   const response = await axios.get(buildRequestUrl(path), {
     responseType: 'blob',
     timeout: 60000,
+    withCredentials: true,
   })
+
+  const contentType = response.headers['content-type'] || ''
+  if (contentType.includes('application/json')) {
+    const payload = JSON.parse(await response.data.text())
+    const message = payload.otherMessage || payload.errorMessage || '下载失败'
+    if (payload.code === 1) {
+      notifyUnauthorized(message)
+    }
+    throw createRequestError(message, payload.code)
+  }
 
   const disposition = response.headers['content-disposition'] || ''
   const encodedMatch = disposition.match(/filename\\*=UTF-8''([^;]+)/i)

@@ -218,36 +218,31 @@ watch(
 
 <template>
   <div class="page-shell compact-page">
-    <section class="content-panel page-toolbar">
-      <div class="page-toolbar__left">
-        <span class="page-toolbar__title">巡检动作</span>
-        <div class="page-toolbar__actions">
+    <section class="content-panel server-toolbar">
+      <div class="server-toolbar__controls">
+        <el-input v-model="filters.ip" class="filter-input filter-input--compact" placeholder="按 IP 检索" clearable />
+        <el-date-picker
+          v-model="filters.date"
+          class="filter-input filter-input--compact"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="巡检日期"
+          clearable
+        />
+        <el-select v-model="filters.status" class="filter-input filter-input--compact" placeholder="巡检状态" clearable>
+          <el-option v-for="option in statusOptions" :key="String(option.value)" :label="option.label" :value="option.value" />
+        </el-select>
+        <el-button type="primary" @click="applyRouteFilters">查询</el-button>
+        <el-button @click="clearRouteFilters">重置</el-button>
         <el-button type="primary" :loading="actionLoading" @click="triggerInspection">立即巡检</el-button>
         <el-button :loading="actionLoading" @click="exportReport">导出结果</el-button>
-        </div>
       </div>
-      <div class="page-toolbar__meta">
+
+      <div class="server-toolbar__meta">
         <span>当前命中：{{ total }} 台</span>
         <span>重点设备：{{ focusRecord?.ip || '--' }}</span>
         <span>{{ focusMetricLabel }}：{{ focusRecord?.description || '--' }}</span>
       </div>
-    </section>
-
-    <section class="content-panel filter-panel">
-      <el-input v-model="filters.ip" class="filter-input filter-input--compact" placeholder="按 IP 检索" clearable />
-      <el-date-picker
-        v-model="filters.date"
-        class="filter-input filter-input--compact"
-        type="date"
-        value-format="YYYY-MM-DD"
-        placeholder="巡检日期"
-        clearable
-      />
-      <el-select v-model="filters.status" class="filter-input filter-input--compact" placeholder="巡检状态" clearable>
-        <el-option v-for="option in statusOptions" :key="String(option.value)" :label="option.label" :value="option.value" />
-      </el-select>
-      <el-button type="primary" @click="applyRouteFilters">查询</el-button>
-      <el-button @click="clearRouteFilters">重置</el-button>
     </section>
 
     <section class="stats-grid">
@@ -329,11 +324,32 @@ watch(
 </template>
 
 <style scoped>
-.filter-panel {
-  display: grid;
-  grid-template-columns: 180px 180px 150px auto auto;
-  gap: 10px;
+.server-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 14px 16px;
+}
+
+.server-toolbar__controls {
+  display: grid;
+  grid-template-columns: 180px 180px 150px repeat(4, auto);
+  gap: 10px;
+  align-items: center;
+}
+
+.server-toolbar__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.server-toolbar__meta span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(30, 42, 51, 0.06);
+  color: var(--text-subtle);
+  font-size: 12px;
 }
 
 .filter-input {
@@ -353,13 +369,13 @@ watch(
 }
 
 @media (max-width: 1100px) {
-  .filter-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .server-toolbar__controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
-  .filter-panel {
+  .server-toolbar__controls {
     grid-template-columns: 1fr;
   }
 }

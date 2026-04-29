@@ -1,9 +1,13 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
 
 const route = useRoute()
 const router = useRouter()
+const loggingOut = ref(false)
+const { username, signOut } = useAuth()
 
 const fixedTabs = [
   { name: 'Dashboard', path: '/dashboard', title: '工作台', closable: false },
@@ -60,25 +64,84 @@ function removeTab(path) {
     router.push('/server')
   }
 }
+
+async function handleLogout() {
+  if (loggingOut.value) {
+    return
+  }
+
+  loggingOut.value = true
+  try {
+    await signOut()
+    ElMessage.success('已退出登录')
+  } catch (error) {
+    ElMessage.warning(error.message || '会话已失效')
+  } finally {
+    loggingOut.value = false
+    await router.replace('/login')
+  }
+}
 </script>
 
 <template>
-  <div class="tab-view">
-    <el-tabs :model-value="activeTab" type="card" @tab-click="handleTabClick" @tab-remove="removeTab">
-      <el-tab-pane
-        v-for="tab in tabs"
-        :key="tab.path"
-        :label="tab.title"
-        :name="tab.path"
-        :closable="tab.closable"
-      />
-    </el-tabs>
+  <div class="tab-view glass-panel">
+    <div class="tab-view__tabs">
+      <el-tabs :model-value="activeTab" type="card" @tab-click="handleTabClick" @tab-remove="removeTab">
+        <el-tab-pane
+          v-for="tab in tabs"
+          :key="tab.path"
+          :label="tab.title"
+          :name="tab.path"
+          :closable="tab.closable"
+        />
+      </el-tabs>
+    </div>
+
+    <div class="tab-view__auth">
+      <div class="tab-view__auth-copy">
+        <span>当前用户</span>
+        <strong>{{ username || 'admin' }}</strong>
+      </div>
+      <el-button text type="primary" :loading="loggingOut" @click="handleLogout">退出登录</el-button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .tab-view {
-  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+}
+
+.tab-view__tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-view__auth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: rgba(23, 36, 55, 0.06);
+}
+
+.tab-view__auth-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  color: var(--text-subtle);
+  font-size: 10px;
+}
+
+.tab-view__auth-copy strong {
+  color: var(--text-main);
+  font-size: 12px;
+  letter-spacing: 0.04em;
 }
 
 :deep(.el-tabs__header) {
@@ -118,5 +181,20 @@ function removeTab(path) {
 
 :deep(.el-tabs__item:hover) {
   color: var(--brand);
+}
+
+@media (max-width: 860px) {
+  .tab-view {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tab-view__auth {
+    justify-content: space-between;
+  }
+
+  .tab-view__auth-copy {
+    align-items: flex-start;
+  }
 }
 </style>

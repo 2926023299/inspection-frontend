@@ -97,6 +97,27 @@ function handleDrop(event) {
     emit('request-upload', files)
   }
 }
+
+function handleFileCommand(command, row) {
+  if (command === 'download') {
+    emit('download', { path: row.path, directory: false })
+    return
+  }
+
+  if (command === 'download-dir') {
+    emit('download', { path: row.path, directory: true })
+    return
+  }
+
+  if (command === 'rename') {
+    emit('rename', row)
+    return
+  }
+
+  if (command === 'delete') {
+    emit('delete', row)
+  }
+}
 </script>
 
 <template>
@@ -178,14 +199,32 @@ function handleDrop(event) {
         <el-table-column label="修改时间" min-width="170">
           <template #default="{ row }">{{ row.lastModified ? new Date(row.lastModified).toLocaleString('zh-CN') : '--' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="210" fixed="right">
+        <el-table-column label="操作" width="168" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="row.directory ? emit('open-path', row.path) : emit('download', { path: row.path, directory: false })">
-              {{ row.directory ? '打开' : '下载' }}
-            </el-button>
-            <el-button v-if="row.directory" link @click="emit('download', { path: row.path, directory: true })">打包下载</el-button>
-            <el-button link @click="emit('rename', row)">重命名</el-button>
-            <el-button link type="danger" @click="emit('delete', row)">删除</el-button>
+            <div class="file-actions">
+              <el-button
+                size="small"
+                text
+                type="primary"
+                @click="row.directory ? emit('open-path', row.path) : emit('download', { path: row.path, directory: false })"
+              >
+                {{ row.directory ? '打开' : '下载' }}
+              </el-button>
+
+              <el-dropdown trigger="click" @command="(command) => handleFileCommand(command, row)">
+                <el-button size="small" text>
+                  更多
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item v-if="row.directory" command="download-dir">压缩下载</el-dropdown-item>
+                    <el-dropdown-item v-if="!row.directory" command="download">重新下载</el-dropdown-item>
+                    <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                    <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -299,6 +338,14 @@ function handleDrop(event) {
   font-weight: 700;
 }
 
+.file-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
 .remote-files__table {
   position: relative;
   flex: 1;
@@ -348,6 +395,12 @@ function handleDrop(event) {
 .remote-files__collapsed-summary strong {
   font-size: 28px;
   color: var(--text-main);
+}
+
+:deep(.file-actions .el-button) {
+  min-height: 28px;
+  padding-inline: 6px;
+  font-size: 12px;
 }
 
 @media (max-width: 900px) {

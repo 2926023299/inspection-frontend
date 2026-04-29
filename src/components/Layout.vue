@@ -23,13 +23,6 @@ const routeTitle = computed(() => {
   return typeof rawTitle === 'function' ? rawTitle(route) : rawTitle || '巡检系统'
 })
 
-const breadcrumbList = computed(() => {
-  const rawBreadcrumb = route.meta.breadcrumb
-  if (typeof rawBreadcrumb === 'function') return rawBreadcrumb(route)
-  if (Array.isArray(rawBreadcrumb)) return rawBreadcrumb
-  return [routeTitle.value]
-})
-
 const currentDateLabel = new Intl.DateTimeFormat('zh-CN', {
   month: '2-digit',
   day: '2-digit',
@@ -108,20 +101,6 @@ function toggleSidebar() {
     </aside>
 
     <section class="layout-main">
-      <header class="layout-header glass-panel">
-        <div>
-          <p class="header-kicker">OPS CONSOLE</p>
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item v-for="item in breadcrumbList" :key="item">{{ item }}</el-breadcrumb-item>
-          </el-breadcrumb>
-          <h2 class="header-title">{{ routeTitle }}</h2>
-        </div>
-        <div class="header-status">
-          <span>运行模式</span>
-          <strong>巡检控制台</strong>
-        </div>
-      </header>
-
       <TabView />
 
       <main class="layout-content">
@@ -346,46 +325,6 @@ function toggleSidebar() {
   overflow: hidden;
 }
 
-.layout-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 10px 14px;
-}
-
-.header-kicker {
-  margin: 0 0 2px;
-  color: var(--brand);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
-
-.header-title {
-  margin: 4px 0 0;
-  font-size: 16px;
-  letter-spacing: 0.04em;
-}
-
-.header-status {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  color: var(--text-subtle);
-  font-size: 10px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  background: rgba(195, 95, 55, 0.08);
-}
-
-.header-status strong {
-  color: var(--text-main);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-}
-
 .layout-content {
   flex: 1;
   min-height: 0;
@@ -416,15 +355,6 @@ function toggleSidebar() {
 @media (max-width: 720px) {
   .layout-shell {
     padding: 12px;
-  }
-
-  .layout-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .header-status {
-    align-items: flex-start;
   }
 }
 </style>

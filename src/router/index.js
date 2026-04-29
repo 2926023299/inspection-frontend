@@ -1,16 +1,47 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { setUnauthorizedHandler } from '@/api/http'
+import { useAuth } from '@/composables/useAuth'
 import Layout from '@/components/Layout.vue'
 import ServerPage from '@/pages/ServerPage.vue'
 import JavaPage from '@/pages/JavaPage.vue'
 import ServerConnectPage from '@/pages/ServerConnectPage.vue'
 import TupoPage from '@/pages/TupoPage.vue'
 import RootPage from '@/pages/root.vue'
+import LoginPage from '@/pages/LoginPage.vue'
+
+const { ensureSession, handleUnauthorized } = useAuth()
+
+function buildLoginLocation(redirectPath) {
+  if (!redirectPath || redirectPath === '/login') {
+    return { name: 'Login' }
+  }
+
+  return {
+    name: 'Login',
+    query: {
+      redirect: redirectPath,
+    },
+  }
+}
 
 const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: LoginPage,
+    meta: {
+      title: '登录',
+      guestOnly: true,
+    },
+  },
   {
     path: '/',
     component: Layout,
     redirect: '/dashboard',
+    meta: {
+      requiresAuth: true,
+    },
     children: [
       {
         path: 'dashboard',
@@ -90,6 +121,55 @@ const routes = [
 const router = createRouter({
   history: createWebHistory('/inspection/'),
   routes,
+})
+
+setUnauthorizedHandler((error) => {
+  handleUnauthorized()
+  const currentRoute = router.currentRoute.value
+  if (currentRoute.name === 'Login') {
+    return
+  }
+
+  router.replace(buildLoginLocation(currentRoute.fullPath)).catch(() => {})
+
+  if (error?.message) {
+    ElMessage.warning(error.message)
+  }
+})
+
+router.beforeEach(async (to) => {
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+  const guestOnly = to.matched.some((record) => record.meta.guestOnly)
+
+  if (!requiresAuth && !guestOnly) {
+    return true
+  }
+
+  try {
+    const user = await ensureSession()
+
+    if (requiresAuth && !user) {
+      return buildLoginLocation(to.fullPath)
+    }
+
+    if (guestOnly && user) {
+      const redirectPath = typeof to.query.redirect === 'string' && to.query.redirect !== '/login'
+        ? to.query.redirect
+        : '/dashboard'
+      return redirectPath
+    }
+  } catch (error) {
+    if (error.code === 1) {
+      return buildLoginLocation(to.fullPath)
+    }
+
+    ElMessage.error(error.message || '登录状态校验失败')
+    if (requiresAuth) {
+      return false
+    }
+  }
+
+  return true
 })
 
 export default router

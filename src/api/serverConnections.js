@@ -1,5 +1,5 @@
 import axios from 'axios'
-import http, { buildRequestUrl, buildWebSocketUrl } from './http'
+import http, { buildRequestUrl, buildWebSocketUrl, createRequestError, notifyUnauthorized } from './http'
 
 export function listServerConnections() {
   return http.get('/server-connections/servers')
@@ -49,10 +49,15 @@ export async function uploadRemoteFiles(sessionId, path, files) {
       'Content-Type': 'multipart/form-data',
     },
     timeout: 120000,
+    withCredentials: true,
   })
 
   if (response.data?.code && response.data.code !== 200) {
-    throw new Error(response.data.otherMessage || response.data.errorMessage || '上传失败')
+    const message = response.data.otherMessage || response.data.errorMessage || '上传失败'
+    if (response.data.code === 1) {
+      notifyUnauthorized(message)
+    }
+    throw createRequestError(message, response.data.code)
   }
 }
 
@@ -61,7 +66,18 @@ export async function downloadRemoteFile(sessionId, path) {
     params: { path },
     responseType: 'blob',
     timeout: 120000,
+    withCredentials: true,
   })
+
+  const contentType = response.headers['content-type'] || ''
+  if (contentType.includes('application/json')) {
+    const payload = JSON.parse(await response.data.text())
+    const message = payload.otherMessage || payload.errorMessage || '下载失败'
+    if (payload.code === 1) {
+      notifyUnauthorized(message)
+    }
+    throw createRequestError(message, payload.code)
+  }
 
   const disposition = response.headers['content-disposition'] || ''
   const encodedMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i)
