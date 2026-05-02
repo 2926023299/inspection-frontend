@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx'
+
 export function getMysqlTableTabKey(schema, table, type) {
   return `${schema}.${table}:${type}`
 }
@@ -8,21 +10,65 @@ export function getMysqlTableTabTitle(table, type) {
   return `${table} / Data`
 }
 
+export function getMysqlSavedQueryTreeKey(queryId) {
+  return `saved-query:${queryId}`
+}
+
+export function getMysqlQueryTabTreeKey(tab) {
+  if (tab?.savedQueryId) {
+    return getMysqlSavedQueryTreeKey(tab.savedQueryId)
+  }
+  return tab?.key || ''
+}
+
+export function buildMysqlSavedQueryNode(query) {
+  return {
+    key: getMysqlSavedQueryTreeKey(query.id),
+    label: query.title || `query_${query.id}.sql`,
+    type: 'saved-query',
+    savedQuery: query,
+    children: [],
+  }
+}
+
+export function createMysqlQueryPresentationState() {
+  return {
+    viewMode: 'edit',
+    sqlPreviewExpanded: false,
+  }
+}
+
+export function setMysqlQueryResultFocusMode(tab) {
+  if (!tab) {
+    return
+  }
+  tab.viewMode = 'result-focus'
+  tab.sqlPreviewExpanded = false
+}
+
+export function setMysqlQueryEditMode(tab) {
+  if (!tab) {
+    return
+  }
+  tab.viewMode = 'edit'
+  tab.sqlPreviewExpanded = false
+}
+
 export function detectDangerousSql(sql) {
   const normalized = String(sql || '').trim()
   if (!normalized) {
     return false
   }
-
-  if (/^\s*(drop|truncate|alter|create|rename)\b/i.test(normalized)) {
-    return true
-  }
-
-  if (/^\s*update\b/i.test(normalized) && !/\bwhere\b/i.test(normalized)) {
-    return true
-  }
-
-  return /^\s*delete\b/i.test(normalized) && !/\bwhere\b/i.test(normalized)
+  const statements = normalized
+    .split(';')
+    .map((s) => s.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '').trim())
+    .filter(Boolean)
+  return statements.some((s) => {
+    if (/^\s*(drop|truncate|alter|rename)\b/i.test(s)) return true
+    if (/^\s*update\b/i.test(s) && !/\bwhere\b/i.test(s)) return true
+    if (/^\s*delete\b/i.test(s) && !/\bwhere\b/i.test(s)) return true
+    return false
+  })
 }
 
 export function formatMysqlCell(value) {
@@ -142,4 +188,62 @@ export function buildRowKeyValues(row, keyColumns = []) {
     result[columnName] = row?.[columnName]
     return result
   }, {})
+}
+
+export function buildMysqlDumpSql(schema, table, columns, rows, ddl) {
+  const tbl = `\`${table}\``
+  const parts = [
+    `-- ----------------------------`,
+    `-- Table structure for ${table}`,
+    `-- ----------------------------`,
+    `DROP TABLE IF EXISTS ${tbl};`,
+  ]
+  if (ddl) {
+    parts.push(ddl.trim().replace(/;?\s*$/, ';'))
+  }
+  parts.push('')
+  if (columns?.length && rows?.length) {
+    parts.push(`-- ----------------------------`)
+    parts.push(`-- Records of ${table}`)
+    parts.push(`-- ----------------------------`)
+    const colList = columns.map((c) => `\`${c}\``).join(', ')
+    for (const row of rows) {
+      const values = columns.map((col) => {
+        const v = row[col]
+        if (v === null || v === undefined) return 'NULL'
+        if (typeof v === 'number') return String(v)
+        return `'${String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
+      })
+      parts.push(`INSERT INTO ${tbl} (${colList}) VALUES (${values.join(', ')});`)
+    }
+  }
+  return parts.join('\n')
+}
+
+export function exportMysqlExcel(filename, columns, rows) {
+  const data = (rows || []).map((row) => {
+    const obj = {}
+    columns.forEach((col) => {
+      const v = row[col]
+      obj[col] = v === null || v === undefined ? '' : String(v)
+    })
+    return obj
+  })
+  const ws = XLSX.utils.json_to_sheet(data)
+  for (const key of Object.keys(ws)) {
+    if (key[0] === '!') continue
+    if (ws[key]) ws[key].t = 's'
+  }
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
+  XLSX.writeFile(wb, filename)
+}
+
+export function readMysqlSqlFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(reader.error)
+    reader.readAsText(file)
+  })
 }

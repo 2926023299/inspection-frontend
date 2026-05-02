@@ -10,7 +10,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['change', 'close'])
+const emit = defineEmits(['change', 'close', 'close-all'])
 
 function handleTabClick(tabContext) {
   emit('change', tabContext.props.name)
@@ -18,24 +18,101 @@ function handleTabClick(tabContext) {
 </script>
 
 <template>
-  <div class="workbench-tabs glass-panel">
-    <el-tabs :model-value="activeKey" type="card" @tab-click="handleTabClick" @tab-remove="$emit('close', $event)">
+  <div class="workbench-tabs__bar">
+    <el-tabs
+      :model-value="activeKey"
+      type="card"
+      class="workbench-tabs__tabs"
+      @tab-click="handleTabClick"
+      @tab-remove="$emit('close', $event)"
+    >
       <el-tab-pane
         v-for="tab in tabs"
         :key="tab.key"
-        :label="tab.title"
         :name="tab.key"
         closable
-      />
+      >
+        <template #label>
+          <span class="workbench-tabs__label" :class="{ 'is-pinned': tab.pinned }">{{ tab.title }}</span>
+        </template>
+      </el-tab-pane>
     </el-tabs>
+
+    <div v-if="tabs.length > 1" class="workbench-tabs__trailing">
+      <span class="workbench-tabs__count">{{ tabs.length }}</span>
+      <el-button class="workbench-tabs__close-all" size="small" text @click="$emit('close-all')">关闭全部</el-button>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.workbench-tabs {
-  padding: 8px 10px 0;
+.workbench-tabs__bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(30, 42, 51, 0.08);
 }
 
+.workbench-tabs__tabs {
+  flex: 1;
+  min-width: 0;
+}
+
+.workbench-tabs__trailing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-right: 6px;
+}
+
+.workbench-tabs__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: rgba(23, 36, 55, 0.07);
+  color: var(--text-subtle);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.workbench-tabs__close-all {
+  color: var(--text-subtle) !important;
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+  height: auto !important;
+}
+
+.workbench-tabs__close-all:hover {
+  color: var(--danger) !important;
+}
+
+.workbench-tabs__label {
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.workbench-tabs__label.is-pinned {
+  font-weight: 700;
+}
+
+.workbench-tabs__label.is-pinned::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--brand-strong);
+  vertical-align: middle;
+  margin-top: -1px;
+}
+
+/* Deep styles */
 :deep(.el-tabs__header) {
   margin: 0;
 }
@@ -45,10 +122,8 @@ function handleTabClick(tabContext) {
 }
 
 :deep(.el-tabs__nav-scroll) {
-  padding: 8px;
-  border-radius: 16px;
-  background: rgba(250, 246, 238, 0.72);
-  border: 1px solid rgba(30, 42, 51, 0.08);
+  padding: 2px 0;
+  background: transparent;
 }
 
 :deep(.el-tabs__nav) {
@@ -56,18 +131,34 @@ function handleTabClick(tabContext) {
 }
 
 :deep(.el-tabs__item) {
-  height: 38px;
+  height: 34px;
+  line-height: 34px;
   border: none !important;
-  border-radius: 12px;
+  border-radius: 8px;
   color: var(--text-subtle);
-  font-weight: 700;
+  font-weight: 500;
   font-size: 12px;
-  letter-spacing: 0.05em;
+  padding: 0 14px !important;
+  margin-right: 2px;
+}
+
+:deep(.el-tabs__item:hover) {
+  color: var(--text-main);
+  background: rgba(23, 36, 55, 0.05);
 }
 
 :deep(.el-tabs--card > .el-tabs__header .el-tabs__item.is-active) {
   color: var(--text-main);
-  background: var(--panel-strong);
-  box-shadow: 0 10px 18px rgba(63, 55, 43, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+:deep(.el-tabs__item .el-icon) {
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+:deep(.el-tabs__item .el-icon:hover) {
+  color: var(--text-main);
 }
 </style>

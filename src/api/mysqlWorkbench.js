@@ -55,3 +55,15 @@ export function listMysqlQueryHistory(params = {}) {
 export function getMysqlQueryHistoryDetail(batchId) {
   return http.get(`/mysql-workbench/history/${batchId}`)
 }
+
+export function listMysqlSavedQueries() {
+  return http.get('/mysql-workbench/queries')
+}
+
+export function saveMysqlQuery(payload) {
+  return http.post('/mysql-workbench/queries', payload)
+}
+
+export function deleteMysqlSavedQuery(queryId) {
+  return http.delete(`/mysql-workbench/queries/${queryId}`)
+}

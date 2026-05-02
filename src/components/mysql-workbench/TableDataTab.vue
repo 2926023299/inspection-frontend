@@ -1,8 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { deleteMysqlTableRow, getMysqlTableMetadata, insertMysqlTableRow, queryMysqlTableData, updateMysqlTableRow } from '@/api/mysqlWorkbench'
-import { buildRowKeyValues, formatMysqlCell } from '@/utils/mysqlWorkbench'
+import { deleteMysqlTableRow, getMysqlTableDdl, getMysqlTableMetadata, insertMysqlTableRow, queryMysqlTableData, updateMysqlTableRow } from '@/api/mysqlWorkbench'
+import { buildMysqlDumpSql, buildRowKeyValues, exportMysqlExcel, formatMysqlCell } from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
   schema: {
@@ -60,8 +60,9 @@ watch(
 async function loadMetadata() {
   try {
     metadata.value = await getMysqlTableMetadata(props.schema, props.table)
-    if (!filterColumn.value) {
-      filterColumn.value = metadata.value?.columns?.[0]?.name || ''
+    const nextColumns = metadata.value?.columns || []
+    if (!nextColumns.some((column) => column.name === filterColumn.value)) {
+      filterColumn.value = nextColumns[0]?.name || ''
     }
   } catch (requestError) {
     error.value = requestError.message || '加载表结构失败'
@@ -105,7 +106,10 @@ async function loadRows() {
 
 function handleSortChange({ prop, order }) {
   sortColumn.value = prop || ''
-  sortDirection.value = order === 'descending' ? 'DESC' : 'ASC'
+  sortDirection.value = order === 'descending' ? 'DESC' : order === 'ascending' ? 'ASC' : ''
+  if (!order) {
+    sortColumn.value = ''
+  }
   page.value = 1
   loadRows()
 }
@@ -211,57 +215,118 @@ async function deleteRow(row) {
     actionLoading.value = false
   }
 }
+
+async function fetchAllRows() {
+  const allRows = []
+  let page = 1
+  const pageSize = 10000
+  while (true) {
+    const result = await queryMysqlTableData({
+      schema: props.schema,
+      table: props.table,
+      page,
+      pageSize,
+      filters: [],
+      sorts: [],
+    })
+    const rows = result.rows || []
+    allRows.push(...rows)
+    if (rows.length < pageSize) break
+    page++
+  }
+  return allRows
+}
+
+async function handleExport(command) {
+  const colNames = columns.value.map((c) => c.name)
+  const allRows = await fetchAllRows()
+  if (!allRows.length) {
+    ElMessage.warning('当前没有可导出的数据')
+    return
+  }
+  if (command === 'sql') {
+    let ddl = ''
+    try {
+      ddl = await getMysqlTableDdl(props.schema, props.table)
+    } catch {
+      // DDL 获取失败时继续导出，只不含建表语句
+    }
+    const sql = buildMysqlDumpSql(props.schema, props.table, colNames, allRows, ddl)
+    const blob = new Blob([sql], { type: 'text/sql;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${props.schema}.${props.table}.sql`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } else if (command === 'excel') {
+    exportMysqlExcel(`${props.schema}.${props.table}.xlsx`, colNames, allRows)
+  }
+}
 </script>
 
 <template>
   <div class="tab-surface">
-    <section class="content-panel page-toolbar mysql-data-toolbar">
-      <div class="page-toolbar__left">
-        <span class="page-toolbar__title">{{ schema }}.{{ table }}</span>
-        <div class="page-toolbar__actions">
-          <el-select v-model="filterColumn" class="mysql-data-toolbar__filter" placeholder="筛选字段">
-            <el-option v-for="option in filterOptions" :key="option.value" :label="option.label" :value="option.value" />
-          </el-select>
-          <el-select v-model="filterOperator" class="mysql-data-toolbar__operator">
-            <el-option label="包含" value="like" />
-            <el-option label="等于" value="eq" />
-            <el-option label="大于" value="gt" />
-            <el-option label="小于" value="lt" />
-          </el-select>
-          <el-input v-model="filterKeyword" class="mysql-data-toolbar__keyword" placeholder="输入筛选值" clearable @keyup.enter="loadRows" />
-          <el-button type="primary" @click="loadRows">查询</el-button>
-          <el-button @click="handleResetFilters">重置</el-button>
-        </div>
-      </div>
-
-      <div class="page-toolbar__meta">
-        <span>总行数：{{ total }}</span>
-        <span>主定位键：{{ keyColumns.join(', ') || '无' }}</span>
-        <span>{{ readOnly ? '只读表' : '可编辑表' }}</span>
-      </div>
-    </section>
-
-    <section v-if="readOnly" class="mysql-data-alert">
-      <el-alert type="warning" :closable="false" show-icon :title="metadata?.readOnlyReason || '当前表只读'" />
-    </section>
-
     <section v-if="error" class="mysql-data-alert">
       <el-alert type="error" :closable="false" show-icon :title="error" />
     </section>
 
     <section class="content-panel compact-main-panel mysql-data-panel">
-      <div class="section-heading">
-        <div>
-          <h2 class="section-title">Data Grid</h2>
-          <p class="section-caption">完整数据页只保留数据网格、状态条和轻量工具栏。</p>
+      <div class="mysql-data-panel__header">
+        <div class="mysql-data-panel__headline">
+          <div class="mysql-data-panel__title-wrap">
+            <h2 class="mysql-data-panel__title">{{ schema }}.{{ table }}</h2>
+            <div class="mysql-data-panel__chips">
+              <span class="mysql-data-chip">总行数：{{ total }}</span>
+              <span class="mysql-data-chip">主定位键：{{ keyColumns.join(', ') || '无' }}</span>
+              <span class="mysql-data-chip">{{ readOnly ? '只读表' : '可编辑表' }}</span>
+            </div>
+          </div>
+
+          <div class="mysql-data-panel__actions">
+            <el-button size="small" @click="$emit('open-query', { schema, sql: `SELECT * FROM ${schema}.${table} LIMIT 1000;` })">打开查询标签</el-button>
+            <el-button size="small" @click="$emit('open-ddl', { schema, table })">查看 DDL</el-button>
+            <el-button size="small" @click="$emit('open-design', { schema, table })">表设计</el-button>
+            <el-dropdown @command="handleExport">
+              <el-button size="small">导出</el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="sql">导出 SQL</el-dropdown-item>
+                  <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button type="primary" size="small" :disabled="readOnly" @click="openInsertDialog">新增行</el-button>
+          </div>
         </div>
 
-        <div class="mysql-data-panel__actions">
-          <el-button @click="$emit('open-query', { schema, sql: `SELECT * FROM ${schema}.${table} LIMIT 200;` })">打开查询标签</el-button>
-          <el-button @click="$emit('open-ddl', { schema, table })">查看 DDL</el-button>
-          <el-button @click="$emit('open-design', { schema, table })">表设计</el-button>
-          <el-button type="primary" :disabled="readOnly" @click="openInsertDialog">新增行</el-button>
+        <div class="mysql-data-panel__filters">
+          <el-select v-model="filterColumn" size="small" class="mysql-data-toolbar__filter" placeholder="筛选字段">
+            <el-option v-for="option in filterOptions" :key="option.value" :label="option.label" :value="option.value" />
+          </el-select>
+          <el-select v-model="filterOperator" size="small" class="mysql-data-toolbar__operator">
+            <el-option label="包含" value="like" />
+            <el-option label="等于" value="eq" />
+            <el-option label="大于" value="gt" />
+            <el-option label="小于" value="lt" />
+          </el-select>
+          <el-input
+            v-model="filterKeyword"
+            size="small"
+            class="mysql-data-toolbar__keyword"
+            placeholder="输入筛选值"
+            clearable
+            @keyup.enter="loadRows"
+          />
+          <el-button type="primary" size="small" @click="loadRows">查询</el-button>
+          <el-button size="small" @click="handleResetFilters">重置</el-button>
         </div>
+      </div>
+
+      <div v-if="readOnly" class="mysql-data-inline-warning">
+        <el-alert type="warning" :closable="false" show-icon :title="metadata?.readOnlyReason || '当前表只读'" />
       </div>
 
       <div class="compact-table-shell">
@@ -290,8 +355,8 @@ async function deleteRow(row) {
 
           <el-table-column label="操作" width="150" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" :disabled="readOnly" @click="openEditDialog(row)">编辑</el-button>
-              <el-button link type="danger" :disabled="readOnly" @click="deleteRow(row)">删除</el-button>
+              <el-button link size="small" type="primary" :disabled="readOnly" @click="openEditDialog(row)">编辑</el-button>
+              <el-button link size="small" type="danger" :disabled="readOnly" @click="deleteRow(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -316,7 +381,11 @@ async function deleteRow(row) {
       </div>
     </section>
 
-    <el-dialog v-model="dialogVisible" :title="dialogMode === 'insert' ? '新增数据行' : '编辑数据行'" width="720px">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogMode === 'insert' ? '新增数据行' : '编辑数据行'"
+      width="min(720px, calc(100vw - 32px))"
+    >
       <div class="mysql-row-editor">
         <div v-for="column in editableColumns" :key="column.name" class="mysql-row-editor__field">
           <span>{{ column.name }}</span>
@@ -341,20 +410,16 @@ async function deleteRow(row) {
   height: 100%;
 }
 
-.mysql-data-toolbar {
-  gap: 12px;
-}
-
 .mysql-data-toolbar__filter {
-  width: 180px;
+  width: 160px;
 }
 
 .mysql-data-toolbar__operator {
-  width: 120px;
+  width: 108px;
 }
 
 .mysql-data-toolbar__keyword {
-  width: 220px;
+  width: 200px;
 }
 
 .mysql-data-alert {
@@ -363,33 +428,92 @@ async function deleteRow(row) {
 
 .mysql-data-panel {
   flex: 1;
+  gap: 10px;
+  padding: 14px;
+}
+
+.mysql-data-panel__header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mysql-data-panel__headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mysql-data-panel__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mysql-data-panel__title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--text-main);
+}
+
+.mysql-data-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .mysql-data-panel__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+}
+
+.mysql-data-panel__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mysql-data-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(23, 36, 55, 0.06);
+  color: var(--text-subtle);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.mysql-data-inline-warning :deep(.el-alert) {
+  padding: 7px 10px;
+  border-radius: 10px;
 }
 
 .mysql-data-status {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 12px;
+  gap: 10px;
+  padding-top: 8px;
 }
 
 .mysql-data-status__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .mysql-data-status__meta span {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
   background: rgba(23, 36, 55, 0.06);
   color: var(--text-subtle);
@@ -417,5 +541,33 @@ async function deleteRow(row) {
   .mysql-row-editor {
     grid-template-columns: 1fr;
   }
+}
+
+:deep(.el-table) {
+  background: #fff !important;
+}
+
+:deep(.el-table__body-wrapper) {
+  background: #fff !important;
+}
+
+:deep(.el-table__body td) {
+  background: #fff !important;
+}
+
+:deep(.el-table__body tr:hover > td) {
+  background: #f8f4ec !important;
+}
+
+:deep(.el-table__body tr.current-row > td) {
+  background: #f8f4ec !important;
+}
+
+:deep(.el-table__fixed-right) {
+  background: #fff !important;
+}
+
+:deep(.el-table__fixed-right .el-table__fixed-body-wrapper) {
+  background: #fff !important;
 }
 </style>
