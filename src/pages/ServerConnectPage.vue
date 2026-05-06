@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import FileActionDialog from '@/components/server-connect/FileActionDialog.vue'
 import RemoteFilePanel from '@/components/server-connect/RemoteFilePanel.vue'
 import ServerCatalog from '@/components/server-connect/ServerCatalog.vue'
@@ -22,7 +22,6 @@ const {
   activateSession,
   updateSessionStatus,
   updateSessionCwd,
-  closeAllSessions,
 } = useServerConnections()
 
 const {
@@ -82,11 +81,6 @@ function restorePanelPreference() {
 onMounted(() => {
   restorePanelPreference()
   loadServers()
-  window.addEventListener('beforeunload', closeAllSessions)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('beforeunload', closeAllSessions)
 })
 
 watch(leftPanelCollapsed, (collapsed) => {
