@@ -2,6 +2,12 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import { buildTerminalWebSocketUrl } from '@/api/serverConnections'
+import {
+  buildTerminalPingMessage,
+  getTerminalReconnectDelay,
+  shouldReconnectTerminalSocket,
+  TERMINAL_HEARTBEAT_INTERVAL_MS,
+} from '@/utils/terminalSession'
 import '@xterm/xterm/css/xterm.css'
 
 export function useTerminalSession(sessionRef, activeRef, onStatus, onCwd) {
@@ -11,6 +17,10 @@ export function useTerminalSession(sessionRef, activeRef, onStatus, onCwd) {
   let fitAddon
   let socket
   let resizeObserver
+  let heartbeatTimer
+  let reconnectTimer
+  let reconnectAttempt = 0
+  let manualClose = false
 
   function createTerminal() {
     terminal = new Terminal({
@@ -54,6 +64,9 @@ export function useTerminalSession(sessionRef, activeRef, onStatus, onCwd) {
     socket = new WebSocket(buildTerminalWebSocketUrl(sessionId))
 
     socket.addEventListener('open', () => {
+      reconnectAttempt = 0
+      clearReconnectTimer()
+      startHeartbeat()
       status.value = 'connected'
       onStatus(sessionId, 'connected', '终端已连接')
       resizeTerminal()
@@ -76,6 +89,11 @@ export function useTerminalSession(sessionRef, activeRef, onStatus, onCwd) {
     })
 
     socket.addEventListener('close', () => {
+      stopHeartbeat()
+      if (shouldReconnectTerminalSocket({ manualClose, sessionId })) {
+        scheduleReconnect(sessionId)
+        return
+      }
       status.value = 'closed'
       onStatus(sessionId, 'closed', '终端已断开')
     })
@@ -84,6 +102,47 @@ export function useTerminalSession(sessionRef, activeRef, onStatus, onCwd) {
       status.value = 'error'
       onStatus(sessionId, 'error', '终端连接异常')
     })
+  }
+
+  function stopHeartbeat() {
+    if (heartbeatTimer) {
+      window.clearInterval(heartbeatTimer)
+      heartbeatTimer = null
+    }
+  }
+
+  function startHeartbeat() {
+    stopHeartbeat()
+    heartbeatTimer = window.setInterval(() => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(buildTerminalPingMessage())
+      }
+    }, TERMINAL_HEARTBEAT_INTERVAL_MS)
+  }
+
+  function clearReconnectTimer() {
+    if (reconnectTimer) {
+      window.clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+  }
+
+  function scheduleReconnect(sessionId) {
+    if (reconnectTimer || !shouldReconnectTerminalSocket({ manualClose, sessionId })) {
+      return
+    }
+
+    const delay = getTerminalReconnectDelay(reconnectAttempt)
+    reconnectAttempt += 1
+    status.value = 'reconnecting'
+    onStatus(sessionId, 'reconnecting', '终端连接已断开，正在重连')
+
+    reconnectTimer = window.setTimeout(() => {
+      reconnectTimer = null
+      if (shouldReconnectTerminalSocket({ manualClose, sessionId })) {
+        bindSocket(sessionId)
+      }
+    }, delay)
   }
 
   function resizeTerminal() {
@@ -95,6 +154,9 @@ export function useTerminalSession(sessionRef, activeRef, onStatus, onCwd) {
   }
 
   function destroySession() {
+    manualClose = true
+    stopHeartbeat()
+    clearReconnectTimer()
     window.removeEventListener('resize', resizeTerminal)
     resizeObserver?.disconnect()
     resizeObserver = null
