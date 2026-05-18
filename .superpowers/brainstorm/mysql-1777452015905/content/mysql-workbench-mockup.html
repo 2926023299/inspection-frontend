@@ -1,0 +1,673 @@
+<style>
+  .mysql-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .mysql-note {
+    color: #6c757f;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .mysql-shell {
+    border-radius: 28px;
+    overflow: hidden;
+    border: 1px solid rgba(36, 42, 49, 0.12);
+    background:
+      radial-gradient(circle at top right, rgba(195, 95, 55, 0.12), transparent 24%),
+      linear-gradient(180deg, rgba(250, 246, 238, 0.96), rgba(243, 236, 226, 0.98));
+    box-shadow: 0 24px 64px rgba(63, 55, 43, 0.16);
+  }
+
+  .mysql-stage {
+    display: grid;
+    grid-template-columns: 88px 296px minmax(0, 1fr);
+    min-height: 760px;
+  }
+
+  .primary-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px 14px;
+    background: linear-gradient(180deg, #172437 0%, #101a29 100%);
+    color: #f5efe7;
+  }
+
+  .brand-badge {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(195, 95, 55, 0.34), rgba(255, 255, 255, 0.08));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .rail-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rail-item {
+    display: grid;
+    place-items: center;
+    min-height: 62px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(245, 239, 231, 0.66);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-align: center;
+    line-height: 1.35;
+  }
+
+  .rail-item.active {
+    background: linear-gradient(180deg, rgba(195, 95, 55, 0.28), rgba(255, 255, 255, 0.06));
+    border-color: rgba(195, 95, 55, 0.38);
+    color: #fff5ee;
+    box-shadow: inset 0 0 0 1px rgba(195, 95, 55, 0.12);
+  }
+
+  .schema-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 16px 18px 18px;
+    border-right: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(248, 242, 233, 0.82);
+  }
+
+  .schema-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    background: rgba(255, 252, 247, 0.9);
+    border: 1px solid rgba(36, 42, 49, 0.08);
+  }
+
+  .schema-header .label {
+    margin: 0;
+    font-size: 11px;
+    color: #8a7464;
+    letter-spacing: 0.16em;
+  }
+
+  .schema-header strong {
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+
+  .chip-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip-line span,
+  .status-pill,
+  .mini-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(30, 42, 51, 0.05);
+    font-size: 12px;
+    color: #4e5c67;
+  }
+
+  .schema-search {
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.92);
+    color: #7b7f86;
+    font-size: 13px;
+  }
+
+  .tree-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    padding: 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.82);
+  }
+
+  .tree-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 14px;
+    background: rgba(30, 42, 51, 0.03);
+  }
+
+  .tree-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 12px;
+    color: #33414b;
+    font-size: 13px;
+  }
+
+  .tree-row.active {
+    background: linear-gradient(90deg, rgba(195, 95, 55, 0.18), rgba(255, 255, 255, 0.76));
+    border: 1px solid rgba(195, 95, 55, 0.18);
+  }
+
+  .tree-indent {
+    padding-left: 24px;
+  }
+
+  .workspace {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 18px;
+    gap: 14px;
+    background:
+      linear-gradient(90deg, rgba(30, 42, 51, 0.03) 1px, transparent 1px),
+      linear-gradient(rgba(30, 42, 51, 0.03) 1px, transparent 1px),
+      rgba(249, 244, 237, 0.86);
+    background-size: 42px 42px, 42px 42px, auto;
+  }
+
+  .workspace-bar,
+  .surface-panel,
+  .sql-panel {
+    border-radius: 22px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.9);
+    box-shadow: 0 16px 36px rgba(63, 55, 43, 0.1);
+  }
+
+  .workspace-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .title-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .title-stack strong {
+    font-size: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  .title-stack span {
+    color: #6c757f;
+    font-size: 12px;
+  }
+
+  .toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .mini-button.primary {
+    background: rgba(195, 95, 55, 0.14);
+    border-color: rgba(195, 95, 55, 0.24);
+    color: #9f4427;
+  }
+
+  .surface-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+    padding: 16px;
+    flex: 1;
+  }
+
+  .tab-strip {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .tab-pill {
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(30, 42, 51, 0.04);
+    display: inline-flex;
+    align-items: center;
+    font-size: 13px;
+    color: #5d6b74;
+  }
+
+  .tab-pill.active {
+    background: linear-gradient(180deg, rgba(195, 95, 55, 0.16), rgba(255, 255, 255, 0.92));
+    color: #8f3c22;
+    border-color: rgba(195, 95, 55, 0.24);
+  }
+
+  .sub-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .sub-toolbar .chip-line {
+    flex: 1;
+  }
+
+  .table-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid rgba(36, 42, 49, 0.1);
+  }
+
+  .table-header,
+  .table-row-preview {
+    display: grid;
+    grid-template-columns: 88px 150px 150px 140px 160px 1fr;
+  }
+
+  .table-header {
+    background: rgba(23, 36, 55, 0.96);
+    color: #f8f1e8;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+
+  .table-header span,
+  .table-row-preview span {
+    padding: 12px 14px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .table-row-preview {
+    background: rgba(255, 252, 247, 0.82);
+    font-size: 13px;
+    color: #31404b;
+  }
+
+  .table-row-preview:nth-child(even) {
+    background: rgba(249, 243, 236, 0.96);
+  }
+
+  .table-row-preview.dirty {
+    background: linear-gradient(90deg, rgba(195, 95, 55, 0.1), rgba(255, 252, 247, 0.88));
+  }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 1.08fr 0.92fr;
+    gap: 14px;
+  }
+
+  .design-card,
+  .meta-card {
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(250, 246, 238, 0.82);
+  }
+
+  .design-card h3,
+  .meta-card h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255, 252, 247, 0.9);
+    border: 1px solid rgba(36, 42, 49, 0.06);
+  }
+
+  .field span {
+    font-size: 11px;
+    color: #8a7464;
+    letter-spacing: 0.08em;
+  }
+
+  .field strong {
+    font-size: 13px;
+    color: #2d3a45;
+  }
+
+  .sql-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .sql-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .sql-head strong {
+    font-size: 15px;
+    letter-spacing: 0.06em;
+  }
+
+  .sql-editor {
+    padding: 16px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #182535, #101a29);
+    color: #f0e7db;
+    font-size: 13px;
+    line-height: 1.65;
+    font-family: Consolas, "Cascadia Code", monospace;
+    white-space: pre-wrap;
+  }
+
+  .sql-results {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .sql-result {
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(248, 242, 233, 0.8);
+  }
+
+  .sql-result strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .sql-result span {
+    display: block;
+    color: #6c757f;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .feedback-options .option {
+    align-items: center;
+  }
+
+  @media (max-width: 1200px) {
+    .mysql-stage {
+      grid-template-columns: 72px 240px minmax(0, 1fr);
+    }
+
+    .panel-grid,
+    .sql-results {
+      grid-template-columns: 1fr;
+    }
+
+    .table-header,
+    .table-row-preview {
+      grid-template-columns: 72px 120px 140px 120px 130px 1fr;
+    }
+  }
+</style>
+
+<div class="mysql-preview">
+  <h2>MySQL 工作台示意</h2>
+  <p class="subtitle">按你刚才定下来的方向，我先画的是推荐版：单实例多库、表格优先、底部常驻 SQL、多语句执行、可视化表设计器。</p>
+
+  <div class="mockup mysql-shell">
+    <div class="mockup-body mysql-stage">
+      <aside class="primary-rail">
+        <div class="brand-badge">IO</div>
+        <div class="rail-stack">
+          <div class="rail-item">工作台</div>
+          <div class="rail-item">巡检</div>
+          <div class="rail-item">连接</div>
+          <div class="rail-item active">MySQL</div>
+          <div class="rail-item">图模</div>
+        </div>
+      </aside>
+
+      <aside class="schema-panel">
+        <div class="schema-header">
+          <p class="label">ACTIVE INSTANCE</p>
+          <strong>localhost:3306</strong>
+          <div class="chip-line">
+            <span>单实例多库</span>
+            <span>root / Druid</span>
+            <span>管理员模式</span>
+          </div>
+        </div>
+
+        <div class="schema-search">搜索 schema / table / column ...</div>
+
+        <div class="tree-card">
+          <div class="tree-group">
+            <div class="tree-row">▾ schema / ies_ls</div>
+            <div class="tree-row tree-indent">▸ breaker_energy_data</div>
+            <div class="tree-row tree-indent">▸ inspection_table</div>
+            <div class="tree-row tree-indent">▸ topo_device</div>
+          </div>
+
+          <div class="tree-group">
+            <div class="tree-row">▾ schema / inspection</div>
+            <div class="tree-row tree-indent">▾ tables</div>
+            <div class="tree-row tree-indent active">device_status</div>
+            <div class="tree-row tree-indent">job_record</div>
+            <div class="tree-row tree-indent">inspection_log</div>
+            <div class="tree-row tree-indent">server_metrics</div>
+          </div>
+
+          <div class="tree-group">
+            <div class="tree-row">▸ schema / archive</div>
+            <div class="tree-row">▸ system schemas</div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <div class="workspace-bar">
+          <div class="title-stack">
+            <strong>inspection.device_status</strong>
+            <span>默认打开“数据”标签页，向下保留常驻 SQL 工作台</span>
+          </div>
+          <div class="toolbar-actions">
+            <span class="status-pill">42 ms</span>
+            <span class="status-pill">RW</span>
+            <span class="mini-button">刷新</span>
+            <span class="mini-button">导出 CSV</span>
+            <span class="mini-button primary">执行危险语句需确认</span>
+          </div>
+        </div>
+
+        <div class="surface-panel">
+          <div class="tab-strip">
+            <div class="tab-pill active">数据</div>
+            <div class="tab-pill">表设计</div>
+            <div class="tab-pill">DDL 预览</div>
+            <div class="tab-pill">历史</div>
+          </div>
+
+          <div class="sub-toolbar">
+            <div class="chip-line">
+              <span>分页浏览</span>
+              <span>按列筛选</span>
+              <span>行内编辑</span>
+              <span>无主键表只读</span>
+            </div>
+            <div class="chip-line">
+              <span>页 1 / 24</span>
+              <span>每页 50 行</span>
+            </div>
+          </div>
+
+          <div class="table-shell">
+            <div class="table-header">
+              <span>id</span>
+              <span>device_code</span>
+              <span>city_name</span>
+              <span>status</span>
+              <span>updated_at</span>
+              <span>remark</span>
+            </div>
+            <div class="table-row-preview">
+              <span>1021</span>
+              <span>FZ-RTU-0201</span>
+              <span>福州</span>
+              <span>ONLINE</span>
+              <span>2026-04-29 15:08</span>
+              <span>线路状态正常</span>
+            </div>
+            <div class="table-row-preview dirty">
+              <span>1024</span>
+              <span>XM-RTU-0914</span>
+              <span>厦门</span>
+              <span>OFFLINE</span>
+              <span>2026-04-29 15:14</span>
+              <span>已在表格中修改，等待提交</span>
+            </div>
+            <div class="table-row-preview">
+              <span>1088</span>
+              <span>QZ-RTU-1120</span>
+              <span>泉州</span>
+              <span>WARNING</span>
+              <span>2026-04-29 15:18</span>
+              <span>通信质量波动</span>
+            </div>
+            <div class="table-row-preview">
+              <span>1096</span>
+              <span>PT-RTU-0186</span>
+              <span>莆田</span>
+              <span>ONLINE</span>
+              <span>2026-04-29 15:20</span>
+              <span>最近 5 分钟无异常</span>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="design-card">
+              <h3>表设计器会放在第二标签页</h3>
+              <div class="form-grid">
+                <div class="field">
+                  <span>字段名</span>
+                  <strong>device_code</strong>
+                </div>
+                <div class="field">
+                  <span>类型</span>
+                  <strong>varchar(64)</strong>
+                </div>
+                <div class="field">
+                  <span>默认值</span>
+                  <strong>null</strong>
+                </div>
+                <div class="field">
+                  <span>索引</span>
+                  <strong>uniq_device_code</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="meta-card">
+              <h3>右侧保留当前对象摘要</h3>
+              <div class="chip-line">
+                <span>主键: id</span>
+                <span>唯一键: 1</span>
+                <span>普通索引: 2</span>
+              </div>
+              <p class="mysql-note">设计器提交前先生成 SQL 预览，再进入统一确认弹窗。你既能点表单改字段，也能回到底部 SQL 面板直接写语句。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sql-panel">
+          <div class="sql-head">
+            <strong>SQL Batch Runner</strong>
+            <div class="chip-line">
+              <span>多语句</span>
+              <span>遇错即停</span>
+              <span>后端持久化历史</span>
+            </div>
+          </div>
+          <div class="sql-editor">UPDATE inspection.device_status
+SET status = 'OFFLINE', remark = '人工下线'
+WHERE id = 1024;
+
+ALTER TABLE inspection.device_status
+ADD COLUMN operator_name VARCHAR(32) NULL COMMENT '最后操作人';</div>
+          <div class="sql-results">
+            <div class="sql-result">
+              <strong>语句 1 成功</strong>
+              <span>影响 1 行，耗时 18 ms。表格区域会同步刷新变更后的当前页。</span>
+            </div>
+            <div class="sql-result">
+              <strong>语句 2 待确认</strong>
+              <span>属于结构变更，会先提示 DDL 风险，再允许执行。</span>
+            </div>
+            <div class="sql-result">
+              <strong>历史记录</strong>
+              <span>保存批次文本、操作人、时间、结果摘要，后续可以做审计抽屉。</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="options feedback-options">
+    <div class="option" data-choice="looks-right" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>方向基本对</h3>
+        <p>保留这种“左树 + 中间数据 + 底部 SQL”的结构继续细化。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="more-navicat" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>要更像 Navicat</h3>
+        <p>下一版我会把标签层级、对象树和设计器做得更偏桌面客户端。</p>
+      </div>
+    </div>
+  </div>
+</div>

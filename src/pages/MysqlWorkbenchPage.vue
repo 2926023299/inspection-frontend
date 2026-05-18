@@ -2,15 +2,16 @@
 import { onMounted, ref } from 'vue'
 import { ElEmpty, ElMessage, ElMessageBox } from 'element-plus'
 import DdlPreviewTab from '@/components/mysql-workbench/DdlPreviewTab.vue'
+import ExportJobsDialog from '@/components/mysql-workbench/ExportJobsDialog.vue'
 import HistoryTab from '@/components/mysql-workbench/HistoryTab.vue'
 import ObjectTreePanel from '@/components/mysql-workbench/ObjectTreePanel.vue'
 import SqlQueryTab from '@/components/mysql-workbench/SqlQueryTab.vue'
 import TableDataTab from '@/components/mysql-workbench/TableDataTab.vue'
 import TableDesignTab from '@/components/mysql-workbench/TableDesignTab.vue'
 import WorkbenchTabs from '@/components/mysql-workbench/WorkbenchTabs.vue'
-import { executeMysqlSqlBatch } from '@/api/mysqlWorkbench'
+import { createMysqlExportJob, executeMysqlSqlBatch } from '@/api/mysqlWorkbench'
 import { useMysqlWorkbench } from '@/composables/useMysqlWorkbench'
-import { detectDangerousSql, exportMysqlExcel, readMysqlSqlFile } from '@/utils/mysqlWorkbench'
+import { buildMysqlQueryExportRequest, detectDangerousSql, readMysqlSqlFile } from '@/utils/mysqlWorkbench'
 
 const {
   treeLoading,
@@ -23,6 +24,7 @@ const {
   activeTab,
   schemaOptions,
   loadTree,
+  loadSchemaTables,
   toggleSystemSchemas,
   activateTab,
   closeTab,
@@ -34,6 +36,7 @@ const {
   handleTreeNodeSelect,
   handleTreeNodeSelectPinned,
   updateQueryTab,
+  updateTableDataState,
   markTableTabsStale,
   updateTablePreview,
   executeQueryTab,
@@ -43,13 +46,14 @@ const {
 } = useMysqlWorkbench()
 
 const treeCollapsed = ref(false)
+const exportJobsVisible = ref(false)
 
 function onTreeToggleCollapse(collapsed) {
   treeCollapsed.value = collapsed
 }
 
 onMounted(() => {
-  loadTree({ preserveSelection: false, openFirstTable: true })
+  loadTree({ preserveSelection: false, openFirstTable: false })
 })
 
 function handleOpenDesign(payload) {
@@ -67,6 +71,10 @@ function handleOpenQuery(payload = {}) {
 function handleOpenHistory() {
   const historyTab = openHistoryTab()
   historyTab.reloadToken += 1
+}
+
+function handleOpenExports() {
+  exportJobsVisible.value = true
 }
 
 function handleDataChanged(payload) {
@@ -87,21 +95,16 @@ function handleOpenHistoryFromQuery() {
   handleOpenHistory()
 }
 
-async function handleExportResult({ sql, index, columns }) {
+async function handleExportResult({ sql, index }) {
   try {
-    const result = await executeMysqlSqlBatch({
+    const job = await createMysqlExportJob(buildMysqlQueryExportRequest({
       schema: activeTab.value.schema || '',
       sql,
-      maxDisplayRows: 100000,
-    })
-    const statement = (result.results || []).find((r) => r.index === index)
-    if (!statement?.rows?.length) {
-      ElMessage.warning('没有可导出的数据')
-      return
-    }
-    exportMysqlExcel(`query_result_${index}.xlsx`, columns, statement.rows)
+      format: 'XLSX',
+    }))
+    ElMessage.success(`已创建语句 ${index} 的导出任务 #${job.id}`)
   } catch (e) {
-    ElMessage.error(e.message || '导出失败')
+    ElMessage.error(e.message || '创建导出任务失败')
   }
 }
 
@@ -207,9 +210,11 @@ async function handleImportSql({ file, schema }) {
         @toggle-system="toggleSystemSchemas"
         @new-query="handleOpenQuery({})"
         @open-history="handleOpenHistory"
+        @open-exports="handleOpenExports"
         @context-action="handleContextAction"
         @import-sql="handleImportSql"
         @toggle-collapse="onTreeToggleCollapse"
+        @load-schema-tables="loadSchemaTables($event.schema, { page: $event.page, keyword: $event.keyword || '' })"
       />
 
       <section class="mysql-workbench-main">
@@ -221,9 +226,11 @@ async function handleImportSql({ file, schema }) {
             :schema="activeTab.schema"
             :table="activeTab.table"
             :reload-token="activeTab.reloadToken"
+            :state="activeTab.dataState"
             @open-design="handleOpenDesign"
             @open-ddl="handleOpenDdl"
             @open-query="handleOpenQuery"
+            @update-state="updateTableDataState(activeTab.key, $event)"
             @data-changed="handleDataChanged"
           />
 
@@ -254,7 +261,7 @@ async function handleImportSql({ file, schema }) {
             @change-title="updateQueryTab(activeTab.key, { title: $event })"
             @change-sql="updateQueryTab(activeTab.key, { sql: $event })"
             @change-schema="updateQueryTab(activeTab.key, { schema: $event })"
-            @execute="executeQueryTab(activeTab.key)"
+            @execute="executeQueryTab(activeTab.key, $event)"
             @save="saveQueryTab(activeTab)"
             @open-history="handleOpenHistoryFromQuery"
             @show-edit-mode="showQueryEditMode(activeTab.key)"
@@ -273,6 +280,8 @@ async function handleImportSql({ file, schema }) {
         </section>
       </section>
     </section>
+
+    <ExportJobsDialog v-model="exportJobsVisible" />
   </div>
 </template>
 

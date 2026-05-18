@@ -109,6 +109,9 @@ function openCurrentDdlQuery() {
 .mysql-ddl-panel {
   flex: 1;
   gap: 16px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .mysql-ddl-panel__actions {
@@ -158,7 +161,12 @@ function openCurrentDdlQuery() {
 
 @media (max-width: 1080px) {
   .mysql-ddl-grid {
+    flex: none;
     grid-template-columns: 1fr;
+  }
+
+  .mysql-ddl-card {
+    min-height: 360px;
   }
 }
 </style>

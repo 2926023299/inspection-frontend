@@ -1,0 +1,96 @@
+<h2>查询结果区怎么拿到更多空间？</h2>
+<p class="subtitle">先选一个总体方向。重点看结果表格能不能更完整展示，而不是配色细节。</p>
+
+<div class="cards" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. 折叠 SQL 编辑器</div>
+        <div class="mockup-body">
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #d8d0c3;border-radius:12px;background:#f7f2e9;">
+              <strong>query_3.sql</strong>
+              <span class="label">收起编辑器</span>
+            </div>
+            <div style="height:64px;border-radius:14px;background:#1d2a3d;color:#f6efe4;padding:12px;font-family:monospace;">SELECT * FROM ...</div>
+            <div style="height:220px;border-radius:14px;background:#fff;border:1px solid #ddd;display:grid;grid-template-rows:42px 1fr;overflow:hidden;">
+              <div style="background:#34424f;color:#fff;padding:10px 12px;font-weight:700;">结果表格</div>
+              <div style="background:repeating-linear-gradient(0deg,#fff 0 32px,#f7f7f7 32px 64px);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>保留同页编辑</h3>
+      <p>默认展开 SQL，执行后可以一键收起，上下文还在同一页里。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. 结果独立标签页</div>
+        <div class="mockup-body">
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <div style="padding:8px 12px;border-radius:12px;background:#efe6d8;">query_3.sql</div>
+            <div style="padding:8px 12px;border-radius:12px;background:#1f2c3d;color:#fff;">结果 #15</div>
+          </div>
+          <div style="height:286px;border-radius:14px;background:#fff;border:1px solid #ddd;display:grid;grid-template-rows:44px 1fr;overflow:hidden;">
+            <div style="display:flex;justify-content:space-between;align-items:center;background:#34424f;color:#fff;padding:10px 12px;font-weight:700;">
+              <span>完整结果</span><span class="label" style="color:#d7e0ea">可横向滚动</span>
+            </div>
+            <div style="background:repeating-linear-gradient(0deg,#fff 0 30px,#f8f8f8 30px 60px);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>查询和结果分离</h3>
+      <p>SQL 编辑留在原标签，执行后新开结果标签页，结果可以占满主体区域。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. 结果专注模式</div>
+        <div class="mockup-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="padding:8px 12px;border-radius:12px;background:#efe6d8;">query_3.sql</div>
+            <div style="padding:8px 12px;border-radius:12px;background:#c96635;color:#fff;">专注结果</div>
+          </div>
+          <div style="height:286px;border-radius:14px;background:#fff;border:1px solid #ddd;display:grid;grid-template-rows:44px 1fr;overflow:hidden;">
+            <div style="background:#34424f;color:#fff;padding:10px 12px;font-weight:700;">结果全屏区</div>
+            <div style="background:repeating-linear-gradient(0deg,#fff 0 30px,#f8f8f8 30px 60px);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>同标签切换视图</h3>
+      <p>不新开标签，点击后把 SQL 编辑器几乎全部收起，只看结果，再切回编辑。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:18px;">
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>我建议先做 B</h4>
+      <ul>
+        <li>结果区空间最大，最接近数据库客户端的使用习惯</li>
+        <li>不会丢掉原 SQL 上下文</li>
+        <li>后续还能叠加 C 的“专注模式”</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>你需要权衡</h4>
+      <ul>
+        <li>A 最省开发量，但结果空间提升有限</li>
+        <li>B 标签会变多，需要设计命名规则</li>
+        <li>C 交互最顺，但状态切换逻辑会更细</li>
+      </ul>
+    </div>
+  </div>
+</div>

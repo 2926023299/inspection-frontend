@@ -1,7 +1,9 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { formatMysqlCell } from '@/utils/mysqlWorkbench'
+import SqlEditor from './SqlEditor.vue'
+import VirtualResultTable from './VirtualResultTable.vue'
+import { formatMysqlResultRowCount, resolveMysqlExecutableSql } from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
   tab: {
@@ -30,6 +32,11 @@ const isEditMode = computed(() => props.tab.viewMode !== 'result-focus')
 const isResultFocusMode = computed(() => props.tab.viewMode === 'result-focus')
 const shouldShowSqlPreview = computed(() => isResultFocusMode.value && props.tab.sqlPreviewExpanded)
 const sqlPreviewToggleText = computed(() => (shouldShowSqlPreview.value ? '收起 SQL' : '展开 SQL'))
+const editorRef = ref(null)
+const selectedSql = ref('')
+const hasSelectedSql = computed(() => Boolean(selectedSql.value.trim()))
+const executeButtonText = computed(() => (hasSelectedSql.value ? '执行选中 SQL' : '执行 SQL'))
+const sqlPreviewText = computed(() => props.tab.lastExecutedSql || props.tab.sql || '')
 
 const summaryText = computed(() => {
   if (!props.tab.results?.length) {
@@ -42,12 +49,26 @@ const summaryText = computed(() => {
   return `最近一次返回 ${props.tab.results.length} 段结果`
 })
 
+const summaryBadgeText = computed(() => {
+  if (!props.tab.results?.length) {
+    return '无结果'
+  }
+  const failed = props.tab.results.filter((result) => !result.success).length
+  if (failed) {
+    return `${failed} 失败`
+  }
+  return `${props.tab.results.length} 段结果`
+})
+
 const saveStatusText = computed(() => {
   if (props.tab.saveStatus === 'saving') return '保存中'
   if (props.tab.saveStatus === 'failed') return props.tab.saveError || '保存失败'
   if (props.tab.savedQueryId) return `已保存 #${props.tab.savedQueryId}`
   return '未保存'
 })
+
+const riskBadgeText = computed(() => (props.tab.dangerous ? '高危' : '普通'))
+const batchBadgeText = computed(() => (props.tab.batchId ? `批次 #${props.tab.batchId}` : '未执行'))
 
 function handleExportResult(result) {
   if (!result.columns?.length) {
@@ -56,40 +77,79 @@ function handleExportResult(result) {
   }
   emit('export-result', { sql: result.sql, index: result.index, columns: result.columns })
 }
+
+function flushSql() {
+  editorRef.value?.flush?.()
+}
+
+function handleSelectionChange(value) {
+  selectedSql.value = value || ''
+}
+
+function buildExecutePayload() {
+  if (!isEditMode.value) {
+    return {
+      sqlOverride: String(props.tab.lastExecutedSql || props.tab.sql || '').trim(),
+      usedSelection: Boolean(props.tab.lastExecutionUsedSelection && props.tab.lastExecutedSql),
+    }
+  }
+  const resolved = resolveMysqlExecutableSql({
+    sql: props.tab.sql,
+    selectedSql: editorRef.value?.getSelectedSql?.() || selectedSql.value,
+  })
+  return {
+    sqlOverride: resolved.sql,
+    usedSelection: resolved.hasSelection,
+  }
+}
+
+function handleExecute() {
+  flushSql()
+  emit('execute', buildExecutePayload())
+}
+
+function handleSave() {
+  flushSql()
+  emit('save')
+}
+
+defineExpose({ flushSql })
 </script>
 
 <template>
   <div class="tab-surface">
     <section class="content-panel page-toolbar mysql-query-toolbar" :class="{ 'is-focus': isResultFocusMode }">
       <template v-if="isEditMode">
-        <div class="page-toolbar__left">
+        <div class="mysql-query-toolbar__edit-row">
           <el-input
             :model-value="tab.title"
             class="mysql-query-toolbar__title"
             placeholder="查询名称"
             @update:model-value="$emit('change-title', $event)"
           />
-          <div class="page-toolbar__actions">
-            <el-select
-              :model-value="tab.schema"
-              class="mysql-query-toolbar__schema"
-              placeholder="执行 schema"
-              clearable
-              @update:model-value="$emit('change-schema', $event)"
-            >
-              <el-option v-for="option in schemaOptions" :key="option.value" :label="option.label" :value="option.value" />
-            </el-select>
-            <el-button type="primary" :loading="tab.executing" @click="$emit('execute')">执行 SQL</el-button>
-            <el-button :loading="tab.saveStatus === 'saving'" @click="$emit('save')">保存</el-button>
+
+          <el-select
+            :model-value="tab.schema"
+            class="mysql-query-toolbar__schema"
+            placeholder="执行 schema"
+            clearable
+            @update:model-value="$emit('change-schema', $event)"
+          >
+            <el-option v-for="option in schemaOptions" :key="option.value" :label="option.label" :value="option.value" />
+          </el-select>
+
+          <div class="mysql-query-toolbar__actions">
+            <el-button type="primary" :loading="tab.executing" @click="handleExecute">{{ executeButtonText }}</el-button>
+            <el-button :loading="tab.saveStatus === 'saving'" @click="handleSave">保存</el-button>
             <el-button :disabled="!tab.batchId" @click="$emit('open-history')">查看历史</el-button>
           </div>
-        </div>
 
-        <div class="page-toolbar__meta">
-          <span>{{ summaryText }}</span>
-          <span>{{ saveStatusText }}</span>
-          <span>{{ tab.dangerous ? '包含高风险语句' : '普通批次' }}</span>
-          <span>{{ tab.batchId ? `批次 #${tab.batchId}` : '未执行' }}</span>
+          <div class="mysql-query-toolbar__status">
+            <span>{{ summaryBadgeText }}</span>
+            <span>{{ saveStatusText }}</span>
+            <span>{{ riskBadgeText }}</span>
+            <span>{{ batchBadgeText }}</span>
+          </div>
         </div>
       </template>
 
@@ -106,7 +166,7 @@ function handleExportResult(result) {
 
         <div class="page-toolbar__right mysql-query-toolbar__focus-actions">
           <el-button size="small" @click="$emit('show-edit-mode')">返回编辑</el-button>
-          <el-button type="primary" size="small" :loading="tab.executing" @click="$emit('execute')">再执行</el-button>
+          <el-button type="primary" size="small" :loading="tab.executing" @click="handleExecute">再执行</el-button>
           <el-button size="small" @click="$emit('toggle-sql-preview')">{{ sqlPreviewToggleText }}</el-button>
           <el-button size="small" :disabled="!tab.batchId" @click="$emit('open-history')">查看历史</el-button>
         </div>
@@ -115,17 +175,16 @@ function handleExportResult(result) {
 
     <section class="content-panel compact-main-panel mysql-query-panel" :class="{ 'is-focus': isResultFocusMode }">
       <div v-if="isEditMode" class="mysql-query-editor">
-        <el-input
+        <SqlEditor
+          ref="editorRef"
           :model-value="tab.sql"
-          type="textarea"
-          :autosize="{ minRows: 16, maxRows: 22 }"
-          placeholder="在这里输入 SQL，支持多语句批量执行。"
           @update:model-value="$emit('change-sql', $event)"
+          @selection-change="handleSelectionChange"
         />
       </div>
 
       <div v-else-if="shouldShowSqlPreview" class="mysql-query-focus-preview">
-        <pre>{{ tab.sql }}</pre>
+        <pre>{{ sqlPreviewText }}</pre>
       </div>
 
       <div class="mysql-query-results compact-scroll-body" :class="{ 'is-focus': isResultFocusMode }">
@@ -147,7 +206,7 @@ function handleExportResult(result) {
             <div class="mysql-query-result__meta">
               <span :class="{ 'is-error': !result.success }">{{ result.success ? '成功' : '失败' }}</span>
               <span v-if="result.columns?.length">
-                {{ result.totalRowCount && result.totalRowCount > result.rows?.length ? result.rows?.length + ' / ' + result.totalRowCount : (result.rows?.length || 0) }} 行
+                {{ formatMysqlResultRowCount(result) }}
               </span>
               <span>{{ result.durationMs || 0 }} ms</span>
               <el-button v-if="result.columns?.length" size="small" @click="handleExportResult(result)">导出 Excel</el-button>
@@ -172,20 +231,7 @@ function handleExportResult(result) {
           <pre v-if="!result.success" class="mysql-query-failed-sql">{{ result.sql }}</pre>
 
           <div v-if="result.columns?.length" class="mysql-query-result__table">
-            <el-table :data="result.rows || []" border>
-              <el-table-column
-                v-for="column in result.columns"
-                :key="column"
-                :prop="column"
-                :label="column"
-                min-width="140"
-                show-overflow-tooltip
-              >
-                <template #default="{ row }">
-                  {{ formatMysqlCell(row[column]) }}
-                </template>
-              </el-table-column>
-            </el-table>
+            <VirtualResultTable :columns="result.columns" :rows="result.rows || []" />
           </div>
         </div>
       </div>
@@ -202,12 +248,75 @@ function handleExportResult(result) {
   height: 100%;
 }
 
+.mysql-query-toolbar {
+  min-height: 60px;
+  padding: 8px 14px;
+  gap: 10px;
+}
+
+.mysql-query-toolbar__edit-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
 .mysql-query-toolbar__schema {
-  width: 180px;
+  flex: 0 0 150px;
+  width: 150px;
 }
 
 .mysql-query-toolbar__title {
-  width: 220px;
+  flex: 0 1 200px;
+  width: 200px;
+  min-width: 160px;
+}
+
+.mysql-query-toolbar__actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.mysql-query-toolbar__status {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.mysql-query-toolbar__status span {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: 170px;
+  min-height: 30px;
+  padding: 0 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(30, 42, 51, 0.06);
+  color: var(--text-subtle);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mysql-query-toolbar :deep(.el-button) {
+  min-height: 36px;
+  height: 36px;
+  padding-inline: 10px;
+  border-radius: 12px;
+}
+
+.mysql-query-toolbar :deep(.el-input__wrapper),
+.mysql-query-toolbar :deep(.el-select__wrapper) {
+  min-height: 38px;
 }
 
 .mysql-query-panel {
@@ -219,15 +328,8 @@ function handleExportResult(result) {
   gap: 12px;
 }
 
-.mysql-query-editor :deep(.el-textarea__inner) {
-  min-height: 320px !important;
-  padding: 16px !important;
-  border-radius: 18px !important;
-  background: linear-gradient(180deg, #182535, #101a29) !important;
-  color: #f1e8dd !important;
-  font-family: Consolas, "Cascadia Code", monospace !important;
-  font-size: 13px !important;
-  line-height: 1.65 !important;
+.mysql-query-editor {
+  min-height: 320px;
 }
 
 .mysql-query-results {
@@ -366,5 +468,18 @@ function handleExportResult(result) {
   border-radius: 8px;
   background: rgba(23, 36, 55, 0.06);
   color: var(--text-main);
+}
+
+@media (max-width: 1180px) {
+  .mysql-query-toolbar__edit-row {
+    flex-wrap: wrap;
+  }
+
+  .mysql-query-toolbar__status {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
 }
 </style>

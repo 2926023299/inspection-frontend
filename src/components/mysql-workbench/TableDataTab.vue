@@ -1,8 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { deleteMysqlTableRow, getMysqlTableDdl, getMysqlTableMetadata, insertMysqlTableRow, queryMysqlTableData, updateMysqlTableRow } from '@/api/mysqlWorkbench'
-import { buildMysqlDumpSql, buildRowKeyValues, exportMysqlExcel, formatMysqlCell } from '@/utils/mysqlWorkbench'
+import { createMysqlExportJob, deleteMysqlTableRow, getMysqlTableMetadata, insertMysqlTableRow, queryMysqlTableData, updateMysqlTableRow } from '@/api/mysqlWorkbench'
+import { buildMysqlTableExportRequest, buildRowKeyValues, createMysqlTableDataState, formatMysqlCell, patchMysqlTableDataState } from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
   schema: {
@@ -17,23 +17,21 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  state: {
+    type: Object,
+    default: () => createMysqlTableDataState(),
+  },
 })
 
-const emit = defineEmits(['open-design', 'open-ddl', 'open-query', 'data-changed'])
+const emit = defineEmits(['open-design', 'open-ddl', 'open-query', 'update-state', 'data-changed'])
 
 const loading = ref(false)
 const actionLoading = ref(false)
 const error = ref('')
 const metadata = ref(null)
 const rows = ref([])
-const total = ref(0)
-const page = ref(1)
-const pageSize = ref(50)
-const filterColumn = ref('')
-const filterOperator = ref('like')
-const filterKeyword = ref('')
-const sortColumn = ref('')
-const sortDirection = ref('')
+const total = ref(null)
+const hasNext = ref(false)
 const currentRow = ref(null)
 const dialogVisible = ref(false)
 const dialogMode = ref('insert')
@@ -45,11 +43,46 @@ const keyColumns = computed(() => metadata.value?.keyColumns || [])
 const readOnly = computed(() => Boolean(metadata.value?.readOnly))
 const editableColumns = computed(() => columns.value.filter((column) => !(column.autoIncrement && column.primaryKey)))
 const filterOptions = computed(() => columns.value.map((column) => ({ label: column.name, value: column.name })))
+const tableState = computed(() => createMysqlTableDataState(props.state))
+const page = tableStateField('page')
+const pageSize = tableStateField('pageSize')
+const filterColumn = tableStateField('filterColumn')
+const filterOperator = tableStateField('filterOperator')
+const filterKeyword = tableStateField('filterKeyword')
+const sortColumn = tableStateField('sortColumn')
+const sortDirection = tableStateField('sortDirection')
+const tableDefaultSort = computed(() => (
+  sortColumn.value
+    ? { prop: sortColumn.value, order: sortDirection.value === 'DESC' ? 'descending' : 'ascending' }
+    : {}
+))
+const paginationTotal = computed(() => {
+  if (typeof total.value === 'number') return total.value
+  return (page.value - 1) * pageSize.value + rows.value.length + (hasNext.value ? pageSize.value : 0)
+})
+
+function tableStateField(field) {
+  return computed({
+    get() {
+      return tableState.value[field]
+    },
+    set(value) {
+      updateTableState({ [field]: value })
+    },
+  })
+}
+
+function updateTableState(patch) {
+  const nextState = patchMysqlTableDataState(tableState.value, patch)
+  emit('update-state', nextState)
+  return nextState
+}
 
 watch(
   () => [props.schema, props.table, props.reloadToken],
   async () => {
-    page.value = 1
+    total.value = null
+    hasNext.value = false
     currentRow.value = null
     await loadMetadata()
     await loadRows()
@@ -62,63 +95,74 @@ async function loadMetadata() {
     metadata.value = await getMysqlTableMetadata(props.schema, props.table)
     const nextColumns = metadata.value?.columns || []
     if (!nextColumns.some((column) => column.name === filterColumn.value)) {
-      filterColumn.value = nextColumns[0]?.name || ''
+      updateTableState({ filterColumn: nextColumns[0]?.name || '' })
     }
   } catch (requestError) {
     error.value = requestError.message || '加载表结构失败'
   }
 }
 
-async function loadRows() {
+async function loadRows({ includeTotal = false, state = tableState.value } = {}) {
   loading.value = true
   error.value = ''
   try {
+    const queryState = createMysqlTableDataState(state)
     const filters = []
-    if (filterColumn.value && String(filterKeyword.value || '').trim()) {
+    if (queryState.filterColumn && String(queryState.filterKeyword || '').trim()) {
       filters.push({
-        column: filterColumn.value,
-        operator: filterOperator.value,
-        value: filterKeyword.value,
+        column: queryState.filterColumn,
+        operator: queryState.filterOperator,
+        value: queryState.filterKeyword,
       })
     }
-    const sorts = sortColumn.value
-      ? [{ column: sortColumn.value, direction: sortDirection.value || 'ASC' }]
+    const sorts = queryState.sortColumn
+      ? [{ column: queryState.sortColumn, direction: queryState.sortDirection || 'ASC' }]
       : []
 
     const result = await queryMysqlTableData({
       schema: props.schema,
       table: props.table,
-      page: page.value,
-      pageSize: pageSize.value,
+      page: queryState.page,
+      pageSize: queryState.pageSize,
+      includeTotal,
       filters,
       sorts,
     })
     rows.value = result.rows || []
-    total.value = result.total || 0
+    hasNext.value = Boolean(result.hasNext)
+    if (typeof result.total === 'number') {
+      total.value = result.total
+    } else if (includeTotal) {
+      total.value = 0
+    }
   } catch (requestError) {
     error.value = requestError.message || '加载表数据失败'
     rows.value = []
-    total.value = 0
+    total.value = null
+    hasNext.value = false
   } finally {
     loading.value = false
   }
 }
 
 function handleSortChange({ prop, order }) {
-  sortColumn.value = prop || ''
-  sortDirection.value = order === 'descending' ? 'DESC' : order === 'ascending' ? 'ASC' : ''
-  if (!order) {
-    sortColumn.value = ''
-  }
-  page.value = 1
-  loadRows()
+  const nextState = updateTableState({
+    sortColumn: order ? prop || '' : '',
+    sortDirection: order === 'descending' ? 'DESC' : order === 'ascending' ? 'ASC' : '',
+    page: 1,
+  })
+  total.value = null
+  loadRows({ state: nextState })
 }
 
 function handleResetFilters() {
-  filterKeyword.value = ''
-  filterOperator.value = 'like'
-  page.value = 1
-  loadRows()
+  const nextState = updateTableState({
+    filterKeyword: '',
+    filterOperator: 'like',
+    page: 1,
+  })
+  total.value = null
+  loadRows({ state: nextState })
 }
 
 function handleCurrentChange(row) {
@@ -126,14 +170,18 @@ function handleCurrentChange(row) {
 }
 
 function handlePageChange(value) {
-  page.value = value
-  loadRows()
+  const nextState = updateTableState({ page: value })
+  loadRows({ state: nextState })
 }
 
 function handleSizeChange(value) {
-  pageSize.value = value
-  page.value = 1
-  loadRows()
+  const nextState = updateTableState({ pageSize: value, page: 1 })
+  total.value = null
+  loadRows({ state: nextState })
+}
+
+function handleCountTotal() {
+  loadRows({ includeTotal: true })
 }
 
 function openInsertDialog() {
@@ -216,53 +264,33 @@ async function deleteRow(row) {
   }
 }
 
-async function fetchAllRows() {
-  const allRows = []
-  let page = 1
-  const pageSize = 10000
-  while (true) {
-    const result = await queryMysqlTableData({
+async function handleExport(command) {
+  const format = command === 'sql' ? 'SQL' : command === 'excel' ? 'XLSX' : 'CSV'
+  actionLoading.value = true
+  try {
+    const filters = []
+    if (filterColumn.value && String(filterKeyword.value || '').trim()) {
+      filters.push({
+        column: filterColumn.value,
+        operator: filterOperator.value,
+        value: filterKeyword.value,
+      })
+    }
+    const sorts = sortColumn.value
+      ? [{ column: sortColumn.value, direction: sortDirection.value || 'ASC' }]
+      : []
+    const job = await createMysqlExportJob(buildMysqlTableExportRequest({
       schema: props.schema,
       table: props.table,
-      page,
-      pageSize,
-      filters: [],
-      sorts: [],
-    })
-    const rows = result.rows || []
-    allRows.push(...rows)
-    if (rows.length < pageSize) break
-    page++
-  }
-  return allRows
-}
-
-async function handleExport(command) {
-  const colNames = columns.value.map((c) => c.name)
-  const allRows = await fetchAllRows()
-  if (!allRows.length) {
-    ElMessage.warning('当前没有可导出的数据')
-    return
-  }
-  if (command === 'sql') {
-    let ddl = ''
-    try {
-      ddl = await getMysqlTableDdl(props.schema, props.table)
-    } catch {
-      // DDL 获取失败时继续导出，只不含建表语句
-    }
-    const sql = buildMysqlDumpSql(props.schema, props.table, colNames, allRows, ddl)
-    const blob = new Blob([sql], { type: 'text/sql;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${props.schema}.${props.table}.sql`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  } else if (command === 'excel') {
-    exportMysqlExcel(`${props.schema}.${props.table}.xlsx`, colNames, allRows)
+      format,
+      filters,
+      sorts,
+    }))
+    ElMessage.success(`已创建导出任务 #${job.id}`)
+  } catch (requestError) {
+    ElMessage.error(requestError.message || '创建导出任务失败')
+  } finally {
+    actionLoading.value = false
   }
 }
 </script>
@@ -279,7 +307,7 @@ async function handleExport(command) {
           <div class="mysql-data-panel__title-wrap">
             <h2 class="mysql-data-panel__title">{{ schema }}.{{ table }}</h2>
             <div class="mysql-data-panel__chips">
-              <span class="mysql-data-chip">总行数：{{ total }}</span>
+              <span class="mysql-data-chip">总行数：{{ total === null ? '未计算' : total }}</span>
               <span class="mysql-data-chip">主定位键：{{ keyColumns.join(', ') || '无' }}</span>
               <span class="mysql-data-chip">{{ readOnly ? '只读表' : '可编辑表' }}</span>
             </div>
@@ -293,6 +321,7 @@ async function handleExport(command) {
               <el-button size="small">导出</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
+                  <el-dropdown-item command="csv">导出 CSV</el-dropdown-item>
                   <el-dropdown-item command="sql">导出 SQL</el-dropdown-item>
                   <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
                 </el-dropdown-menu>
@@ -321,6 +350,7 @@ async function handleExport(command) {
             @keyup.enter="loadRows"
           />
           <el-button type="primary" size="small" @click="loadRows">查询</el-button>
+          <el-button size="small" @click="handleCountTotal">计算总数</el-button>
           <el-button size="small" @click="handleResetFilters">重置</el-button>
         </div>
       </div>
@@ -336,6 +366,7 @@ async function handleExport(command) {
           :data="rows"
           border
           highlight-current-row
+          :default-sort="tableDefaultSort"
           @current-change="handleCurrentChange"
           @sort-change="handleSortChange"
         >
@@ -365,6 +396,7 @@ async function handleExport(command) {
       <div class="mysql-data-status">
         <div class="mysql-data-status__meta">
           <span>每页 {{ pageSize }} 行</span>
+          <span>{{ hasNext ? '后面还有数据' : '当前已到末页' }}</span>
           <span>当前选中：{{ currentRow ? '1 行' : '未选中' }}</span>
           <span>{{ readOnly ? '当前表不支持表格写操作' : '当前表支持新增 / 更新 / 删除' }}</span>
         </div>
@@ -372,9 +404,9 @@ async function handleExport(command) {
         <el-pagination
           :current-page="page"
           :page-size="pageSize"
-          :page-sizes="[20, 50, 100]"
+          :page-sizes="[20, 50, 100, 200]"
           layout="total, sizes, prev, pager, next, jumper"
-          :total="total"
+          :total="paginationTotal"
           @current-change="handlePageChange"
           @size-change="handleSizeChange"
         />

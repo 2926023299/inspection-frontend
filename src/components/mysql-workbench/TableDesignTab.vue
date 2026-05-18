@@ -248,6 +248,9 @@ async function executeChanges() {
 .mysql-design-panel {
   flex: 1;
   gap: 16px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .mysql-design-panel__actions {
@@ -277,10 +280,15 @@ async function executeChanges() {
 
 .mysql-design-table,
 .mysql-design-preview {
+  flex: none;
   padding: 14px;
   border-radius: 18px;
   border: 1px solid rgba(30, 42, 51, 0.08);
   background: rgba(255, 252, 247, 0.82);
+}
+
+.mysql-design-table {
+  overflow-x: auto;
 }
 
 .mysql-design-table__header {
@@ -308,6 +316,7 @@ async function executeChanges() {
   grid-template-columns: 1.1fr 0.9fr 90px 90px 0.9fr 1fr auto auto auto auto;
   gap: 10px;
   align-items: center;
+  min-width: 1080px;
 }
 
 .mysql-design-index-row {
@@ -315,6 +324,7 @@ async function executeChanges() {
   grid-template-columns: 1fr 1.2fr auto auto;
   gap: 10px;
   align-items: center;
+  min-width: 680px;
 }
 
 .mysql-design-preview__code {
@@ -338,6 +348,7 @@ async function executeChanges() {
   .mysql-design-row,
   .mysql-design-index-row {
     grid-template-columns: 1fr;
+    min-width: 0;
   }
 }
 </style>

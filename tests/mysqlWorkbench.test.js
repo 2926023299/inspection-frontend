@@ -3,9 +3,18 @@ import assert from 'node:assert/strict'
 
 import {
   buildMysqlSavedQueryNode,
+  buildMysqlSchemaNode,
+  buildMysqlDumpSql,
+  buildMysqlTableExportRequest,
+  createMysqlTableDataState,
+  createDebouncedSqlSync,
   createMysqlQueryPresentationState,
+  resolveMysqlExecutableSql,
+  formatMysqlResultRowCount,
   getMysqlQueryTabTreeKey,
   getMysqlSavedQueryTreeKey,
+  upsertMysqlSchemaTables,
+  patchMysqlTableDataState,
   setMysqlQueryEditMode,
   setMysqlQueryResultFocusMode,
 } from '../src/utils/mysqlWorkbench.js'
@@ -95,4 +104,163 @@ test('result-focus helper can be re-entered from edit mode repeatedly', () => {
 
   assert.equal(tab.viewMode, 'result-focus')
   assert.equal(tab.sqlPreviewExpanded, false)
+})
+
+test('schema table updates preserve unrelated tree node references', () => {
+  const ies = buildMysqlSchemaNode('ies_ls')
+  const audit = buildMysqlSchemaNode('audit')
+  const nodes = [ies, audit]
+
+  const next = upsertMysqlSchemaTables(nodes, 'ies_ls', ['breaker_energy_data', 'inspection_table'], {
+    page: 1,
+    hasNext: true,
+    keyword: '',
+  })
+
+  assert.equal(next[1], audit)
+  assert.notEqual(next[0], ies)
+  assert.equal(next[0].loaded, true)
+  assert.equal(next[0].hasMoreTables, true)
+  assert.deepEqual(
+    next[0].children.map((node) => node.key),
+    ['table:ies_ls.breaker_energy_data', 'table:ies_ls.inspection_table'],
+  )
+})
+
+test('sql draft sync debounces parent updates and can flush before execute', () => {
+  const calls = []
+  const scheduled = []
+  const cleared = []
+  const sync = createDebouncedSqlSync('select 1', (value) => calls.push(value), {
+    delay: 250,
+    setTimer(callback, delay) {
+      scheduled.push({ callback, delay })
+      return scheduled.length
+    },
+    clearTimer(id) {
+      cleared.push(id)
+    },
+  })
+
+  sync.setValue('select 1;')
+  sync.setValue('select 2;')
+
+  assert.deepEqual(calls, [])
+  assert.deepEqual(cleared, [1])
+
+  sync.flush()
+
+  assert.deepEqual(calls, ['select 2;'])
+})
+
+test('selected sql is preferred when resolving the executable query text', () => {
+  assert.deepEqual(
+    resolveMysqlExecutableSql({
+      sql: 'select 1;\nselect 2;\nselect 3;',
+      selectedSql: '\n  select 2;  \n',
+    }),
+    {
+      sql: 'select 2;',
+      hasSelection: true,
+    },
+  )
+})
+
+test('blank selected sql falls back to the full query text', () => {
+  assert.deepEqual(
+    resolveMysqlExecutableSql({
+      sql: '  select 1;\nselect 2;  ',
+      selectedSql: '   ',
+    }),
+    {
+      sql: 'select 1;\nselect 2;',
+      hasSelection: false,
+    },
+  )
+})
+
+test('query result row count shows backend total when provided', () => {
+  assert.equal(
+    formatMysqlResultRowCount({
+      rows: [{ id: 1 }, { id: 2 }],
+      displayRowCount: 2,
+      totalRowCount: 17,
+      truncated: true,
+      displayLimit: 2,
+    }),
+    '2 / 总数 17 行，已截断到 2',
+  )
+})
+
+test('query result row count falls back to displayed rows without total', () => {
+  assert.equal(
+    formatMysqlResultRowCount({
+      rows: [{ id: 1 }, { id: 2 }, { id: 3 }],
+      displayRowCount: 3,
+      truncated: false,
+    }),
+    '3 行',
+  )
+})
+
+test('table export request sends query shape without browser-side rows', () => {
+  assert.deepEqual(
+    buildMysqlTableExportRequest({
+      schema: 'ies_ls',
+      table: 'breaker_energy_data',
+      format: 'CSV',
+      filters: [{ column: 'city_code', operator: 'eq', value: '35401' }],
+      sorts: [{ column: 'id', direction: 'DESC' }],
+    }),
+    {
+      sourceType: 'TABLE',
+      format: 'CSV',
+      schema: 'ies_ls',
+      table: 'breaker_energy_data',
+      sql: '',
+      filters: [{ column: 'city_code', operator: 'eq', value: '35401' }],
+      sorts: [{ column: 'id', direction: 'DESC' }],
+    },
+  )
+})
+
+test('dump sql uses current database table names', () => {
+  const dumpSql = buildMysqlDumpSql(
+    'ops_db',
+    'alarm_log',
+    ['id'],
+    [{ id: 7 }, { id: 8 }],
+    'CREATE TABLE `alarm_log` (\n  `id` bigint NOT NULL\n) ENGINE=InnoDB;',
+  )
+
+  assert.doesNotMatch(dumpSql, /CREATE DATABASE/)
+  assert.doesNotMatch(dumpSql, /USE `ops_db`;/)
+  assert.match(dumpSql, /DROP TABLE IF EXISTS `alarm_log`;/)
+  assert.match(dumpSql, /CREATE TABLE `alarm_log` \(/)
+  assert.match(dumpSql, /INSERT INTO `alarm_log` \(`id`\) VALUES\n\(7\),\n\(8\);/)
+  assert.doesNotMatch(dumpSql, /`ops_db`\.`alarm_log`/)
+})
+
+test('table data state preserves filter and paging values when patched', () => {
+  const state = createMysqlTableDataState()
+  const next = patchMysqlTableDataState(state, {
+    filterColumn: 'city_code',
+    filterOperator: 'eq',
+    filterKeyword: '35401',
+    sortColumn: 'created_at',
+    sortDirection: 'DESC',
+    page: 3,
+    pageSize: 100,
+  })
+
+  assert.deepEqual(next, {
+    filterColumn: 'city_code',
+    filterOperator: 'eq',
+    filterKeyword: '35401',
+    sortColumn: 'created_at',
+    sortDirection: 'DESC',
+    page: 3,
+    pageSize: 100,
+  })
+  assert.deepEqual(state, createMysqlTableDataState())
 })

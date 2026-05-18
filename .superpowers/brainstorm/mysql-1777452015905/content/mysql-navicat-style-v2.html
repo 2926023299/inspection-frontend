@@ -1,0 +1,789 @@
+<style>
+  .navicat-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .navicat-shell {
+    border-radius: 28px;
+    overflow: hidden;
+    border: 1px solid rgba(36, 42, 49, 0.12);
+    background:
+      radial-gradient(circle at top right, rgba(195, 95, 55, 0.1), transparent 22%),
+      linear-gradient(180deg, rgba(250, 246, 238, 0.98), rgba(243, 236, 226, 0.98));
+    box-shadow: 0 28px 68px rgba(63, 55, 43, 0.18);
+  }
+
+  .navicat-window {
+    display: grid;
+    grid-template-columns: 72px 318px minmax(0, 1fr);
+    min-height: 800px;
+  }
+
+  .ops-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px 12px;
+    background: linear-gradient(180deg, #162335 0%, #0f1a29 100%);
+    color: #f6efe5;
+  }
+
+  .ops-rail__brand {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 8px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(195, 95, 55, 0.34), rgba(255, 255, 255, 0.06));
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .ops-rail__item {
+    display: grid;
+    place-items: center;
+    min-height: 54px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(246, 239, 229, 0.64);
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .ops-rail__item.active {
+    color: #fff6ef;
+    background: linear-gradient(180deg, rgba(195, 95, 55, 0.26), rgba(255, 255, 255, 0.05));
+    border-color: rgba(195, 95, 55, 0.3);
+  }
+
+  .object-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 14px 14px 16px 16px;
+    gap: 12px;
+    border-right: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(247, 241, 231, 0.86);
+  }
+
+  .object-toolbar,
+  .object-tree,
+  .workspace-main,
+  .workspace-tabs,
+  .workspace-toolbar,
+  .workspace-surface {
+    border-radius: 20px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.9);
+  }
+
+  .object-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .object-toolbar__title {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .object-toolbar__title strong {
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+
+  .object-toolbar__title span,
+  .object-panel .tip {
+    color: #6c757f;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .mini-chips,
+  .toolbar-chips,
+  .status-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mini-chips span,
+  .toolbar-chips span,
+  .status-pills span,
+  .toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(30, 42, 51, 0.05);
+    color: #495963;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .toolbar-button.primary {
+    background: rgba(195, 95, 55, 0.14);
+    border-color: rgba(195, 95, 55, 0.24);
+    color: #964025;
+  }
+
+  .search-box {
+    min-height: 40px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    border-radius: 14px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.94);
+    color: #7c8289;
+    font-size: 13px;
+  }
+
+  .object-tree {
+    flex: 1;
+    min-height: 0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tree-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 16px;
+    background: rgba(30, 42, 51, 0.03);
+  }
+
+  .tree-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 12px;
+    color: #33414b;
+    font-size: 13px;
+  }
+
+  .tree-line.muted {
+    color: #73818a;
+  }
+
+  .tree-line.active {
+    background: linear-gradient(90deg, rgba(195, 95, 55, 0.2), rgba(255, 255, 255, 0.82));
+    border: 1px solid rgba(195, 95, 55, 0.18);
+    color: #2e3941;
+  }
+
+  .tree-indent-1 {
+    padding-left: 24px;
+  }
+
+  .tree-indent-2 {
+    padding-left: 46px;
+  }
+
+  .workspace-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 14px 16px 16px;
+    gap: 12px;
+    background:
+      linear-gradient(90deg, rgba(30, 42, 51, 0.03) 1px, transparent 1px),
+      linear-gradient(rgba(30, 42, 51, 0.03) 1px, transparent 1px),
+      rgba(249, 244, 237, 0.84);
+    background-size: 42px 42px, 42px 42px, auto;
+  }
+
+  .workspace-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(63, 55, 43, 0.1);
+  }
+
+  .workspace-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid rgba(36, 42, 49, 0.08);
+    border-radius: 0;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(245, 239, 231, 0.92));
+  }
+
+  .doc-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 14px 14px 10px 10px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(30, 42, 51, 0.04);
+    color: #5e6c74;
+    font-size: 13px;
+  }
+
+  .doc-tab.active {
+    background: linear-gradient(180deg, rgba(195, 95, 55, 0.16), rgba(255, 255, 255, 0.96));
+    color: #8f3d22;
+    border-color: rgba(195, 95, 55, 0.22);
+    box-shadow: 0 8px 16px rgba(195, 95, 55, 0.08);
+  }
+
+  .doc-tab.sql {
+    background: rgba(22, 35, 53, 0.08);
+  }
+
+  .workspace-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 58px;
+    padding: 10px 14px;
+    border: 0;
+    border-bottom: 1px solid rgba(36, 42, 49, 0.08);
+    border-radius: 0;
+  }
+
+  .workspace-toolbar__title {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .workspace-toolbar__title strong {
+    font-size: 19px;
+    letter-spacing: 0.04em;
+  }
+
+  .workspace-toolbar__title span {
+    color: #6c757f;
+    font-size: 12px;
+  }
+
+  .workspace-surface {
+    border: 0;
+    border-radius: 0;
+    flex: 1;
+    min-height: 0;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: hidden;
+  }
+
+  .surface-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 14px;
+    min-height: 0;
+    flex: 1;
+  }
+
+  .data-surface,
+  .meta-surface,
+  .query-surface {
+    border-radius: 18px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(250, 246, 238, 0.8);
+  }
+
+  .data-surface {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    min-width: 0;
+  }
+
+  .meta-surface {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .inline-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .inline-toolbar strong,
+  .meta-surface strong,
+  .query-surface strong {
+    font-size: 14px;
+    letter-spacing: 0.05em;
+  }
+
+  .grid-table {
+    overflow: hidden;
+    border-radius: 16px;
+    border: 1px solid rgba(36, 42, 49, 0.1);
+  }
+
+  .grid-header,
+  .grid-row {
+    display: grid;
+    grid-template-columns: 86px 160px 140px 140px 168px minmax(200px, 1fr);
+  }
+
+  .grid-header {
+    background: rgba(23, 36, 55, 0.96);
+    color: #f8f1e8;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+
+  .grid-header span,
+  .grid-row span {
+    padding: 12px 14px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .grid-row {
+    background: rgba(255, 252, 247, 0.86);
+    color: #32404b;
+    font-size: 13px;
+  }
+
+  .grid-row:nth-child(even) {
+    background: rgba(249, 243, 236, 0.96);
+  }
+
+  .grid-row.focused {
+    background: linear-gradient(90deg, rgba(195, 95, 55, 0.14), rgba(255, 252, 247, 0.9));
+  }
+
+  .meta-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.9);
+  }
+
+  .meta-card p {
+    margin: 0;
+    color: #6c757f;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .design-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 14px;
+  }
+
+  .design-card {
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(250, 246, 238, 0.84);
+  }
+
+  .design-card h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .field-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(36, 42, 49, 0.06);
+    background: rgba(255, 252, 247, 0.92);
+  }
+
+  .field-box span {
+    font-size: 11px;
+    color: #8a7464;
+    letter-spacing: 0.08em;
+  }
+
+  .field-box strong {
+    font-size: 13px;
+    color: #2f3b45;
+  }
+
+  .query-surface {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .query-editor {
+    min-height: 290px;
+    padding: 16px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #182535, #101a29);
+    color: #f1e8dd;
+    font-size: 13px;
+    line-height: 1.68;
+    font-family: Consolas, "Cascadia Code", monospace;
+    white-space: pre-wrap;
+  }
+
+  .query-results {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .query-result {
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.9);
+  }
+
+  .query-result strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .query-result span {
+    color: #6c757f;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  @media (max-width: 1260px) {
+    .navicat-window {
+      grid-template-columns: 72px 280px minmax(0, 1fr);
+    }
+
+    .surface-grid,
+    .design-grid,
+    .query-results {
+      grid-template-columns: 1fr;
+    }
+
+    .grid-header,
+    .grid-row {
+      grid-template-columns: 70px 140px 120px 120px 150px minmax(180px, 1fr);
+    }
+  }
+</style>
+
+<div class="navicat-preview">
+  <h2>更偏 Navicat 的工作台结构</h2>
+  <p class="subtitle">这版把 SQL 从页面底部拿掉，改成独立“查询标签页”。重点模仿桌面客户端的感觉：对象树更重、工作区更像文档标签，而不是一页塞完所有能力。</p>
+
+  <div class="mockup navicat-shell">
+    <div class="mockup-body navicat-window">
+      <aside class="ops-rail">
+        <div class="ops-rail__brand">IO</div>
+        <div class="ops-rail__item">工作台</div>
+        <div class="ops-rail__item">巡检</div>
+        <div class="ops-rail__item">连接</div>
+        <div class="ops-rail__item active">MySQL</div>
+        <div class="ops-rail__item">图模</div>
+      </aside>
+
+      <aside class="object-panel">
+        <div class="object-toolbar">
+          <div class="object-toolbar__title">
+            <strong>MySQL Browser</strong>
+            <span>更像 Navicat 的对象导航区，左侧长期固定。</span>
+          </div>
+          <div class="mini-chips">
+            <span>localhost:3306</span>
+            <span>单实例多库</span>
+            <span>root</span>
+          </div>
+          <div class="search-box">过滤连接 / schema / table / view / query</div>
+        </div>
+
+        <div class="object-tree">
+          <div class="tree-block">
+            <div class="tree-line">▾ Connection / local-mysql</div>
+            <div class="tree-line tree-indent-1 muted">▾ Tables</div>
+            <div class="tree-line tree-indent-2">breaker_energy_data</div>
+            <div class="tree-line tree-indent-2">inspection_table</div>
+          </div>
+
+          <div class="tree-block">
+            <div class="tree-line">▾ Schema / inspection</div>
+            <div class="tree-line tree-indent-1 muted">▾ Tables</div>
+            <div class="tree-line tree-indent-2 active">device_status</div>
+            <div class="tree-line tree-indent-2">job_record</div>
+            <div class="tree-line tree-indent-2">inspection_log</div>
+            <div class="tree-line tree-indent-1 muted">▸ Views</div>
+            <div class="tree-line tree-indent-1 muted">▸ Functions</div>
+          </div>
+
+          <div class="tree-block">
+            <div class="tree-line">▾ Queries</div>
+            <div class="tree-line tree-indent-1">query_1.sql</div>
+            <div class="tree-line tree-indent-1">ddl_preview.sql</div>
+          </div>
+
+          <div class="tree-block">
+            <div class="tree-line">▸ Schema / archive</div>
+            <div class="tree-line">▸ System Schemas</div>
+          </div>
+        </div>
+
+        <p class="tip">对象树更接近客户端思路：连接、schema、tables、views、saved queries 分层展示，不把所有动作都塞到一页里。</p>
+      </aside>
+
+      <section class="workspace-wrap">
+        <div class="workspace-main">
+          <div class="workspace-tabs">
+            <div class="doc-tab active">device_status / Data</div>
+            <div class="doc-tab">device_status / Design</div>
+            <div class="doc-tab sql">query_1.sql</div>
+            <div class="doc-tab">DDL Preview</div>
+            <div class="doc-tab">History</div>
+          </div>
+
+          <div class="workspace-toolbar">
+            <div class="workspace-toolbar__title">
+              <strong>inspection.device_status</strong>
+              <span>当前激活的是“表数据”标签，SQL 不再和数据页抢空间。</span>
+            </div>
+            <div class="toolbar-chips">
+              <span>Rows 1-50</span>
+              <span>Readonly if no PK</span>
+              <span>42 ms</span>
+              <span class="toolbar-button">刷新</span>
+              <span class="toolbar-button">新增行</span>
+              <span class="toolbar-button primary">打开查询标签</span>
+            </div>
+          </div>
+
+          <div class="workspace-surface">
+            <div class="surface-grid">
+              <div class="data-surface">
+                <div class="inline-toolbar">
+                  <strong>Data Grid</strong>
+                  <div class="status-pills">
+                    <span>分页浏览</span>
+                    <span>列筛选</span>
+                    <span>排序</span>
+                    <span>行编辑</span>
+                  </div>
+                </div>
+
+                <div class="grid-table">
+                  <div class="grid-header">
+                    <span>id</span>
+                    <span>device_code</span>
+                    <span>city_name</span>
+                    <span>status</span>
+                    <span>updated_at</span>
+                    <span>remark</span>
+                  </div>
+                  <div class="grid-row">
+                    <span>1021</span>
+                    <span>FZ-RTU-0201</span>
+                    <span>福州</span>
+                    <span>ONLINE</span>
+                    <span>2026-04-29 15:08</span>
+                    <span>线路状态正常</span>
+                  </div>
+                  <div class="grid-row focused">
+                    <span>1024</span>
+                    <span>XM-RTU-0914</span>
+                    <span>厦门</span>
+                    <span>OFFLINE</span>
+                    <span>2026-04-29 15:14</span>
+                    <span>当前选中行，右边可看结构/索引摘要</span>
+                  </div>
+                  <div class="grid-row">
+                    <span>1088</span>
+                    <span>QZ-RTU-1120</span>
+                    <span>泉州</span>
+                    <span>WARNING</span>
+                    <span>2026-04-29 15:18</span>
+                    <span>通信质量波动</span>
+                  </div>
+                  <div class="grid-row">
+                    <span>1096</span>
+                    <span>PT-RTU-0186</span>
+                    <span>莆田</span>
+                    <span>ONLINE</span>
+                    <span>2026-04-29 15:20</span>
+                    <span>最近 5 分钟无异常</span>
+                  </div>
+                </div>
+              </div>
+
+              <aside class="meta-surface">
+                <strong>Object Summary</strong>
+                <div class="meta-card">
+                  <div class="mini-chips">
+                    <span>PK: id</span>
+                    <span>Unique: 1</span>
+                    <span>Index: 2</span>
+                  </div>
+                  <p>这里更像客户端右侧摘要区，放当前表对象信息，而不是整块 SQL 编辑器。</p>
+                </div>
+                <div class="meta-card">
+                  <strong>快速动作</strong>
+                  <div class="mini-chips">
+                    <span>打开设计</span>
+                    <span>查看 DDL</span>
+                    <span>新建查询</span>
+                  </div>
+                </div>
+              </aside>
+            </div>
+
+            <div class="design-grid">
+              <div class="design-card">
+                <h3>表设计标签页会长这样</h3>
+                <div class="form-grid">
+                  <div class="field-box">
+                    <span>字段名</span>
+                    <strong>device_code</strong>
+                  </div>
+                  <div class="field-box">
+                    <span>类型</span>
+                    <strong>varchar(64)</strong>
+                  </div>
+                  <div class="field-box">
+                    <span>默认值</span>
+                    <strong>null</strong>
+                  </div>
+                  <div class="field-box">
+                    <span>索引</span>
+                    <strong>uniq_device_code</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="design-card">
+                <h3>独立查询标签页的收益</h3>
+                <p class="subtitle">数据页能留出更多横向空间给表格，查询页则可以放更大的编辑器和结果区域。这个拆法比把 SQL 压在底部更接近 Navicat 的使用习惯。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="workspace-main">
+          <div class="workspace-tabs">
+            <div class="doc-tab">device_status / Data</div>
+            <div class="doc-tab">device_status / Design</div>
+            <div class="doc-tab sql active">query_1.sql</div>
+            <div class="doc-tab">DDL Preview</div>
+            <div class="doc-tab">History</div>
+          </div>
+
+          <div class="workspace-toolbar">
+            <div class="workspace-toolbar__title">
+              <strong>query_1.sql</strong>
+              <span>查询工作台被单独抽成文档标签页，编辑器和结果区可以完整展开。</span>
+            </div>
+            <div class="toolbar-chips">
+              <span>多语句</span>
+              <span>遇错即停</span>
+              <span>高危 SQL 强确认</span>
+              <span class="toolbar-button primary">执行</span>
+            </div>
+          </div>
+
+          <div class="workspace-surface">
+            <div class="query-surface">
+              <div class="inline-toolbar">
+                <strong>SQL Editor</strong>
+                <div class="status-pills">
+                  <span>inspection</span>
+                  <span>保存历史</span>
+                  <span>结果多标签</span>
+                </div>
+              </div>
+              <div class="query-editor">SELECT id, device_code, status, updated_at
+FROM inspection.device_status
+WHERE city_name = '福州'
+ORDER BY updated_at DESC
+LIMIT 200;
+
+UPDATE inspection.device_status
+SET remark = '人工确认离线'
+WHERE id = 1024;</div>
+              <div class="query-results">
+                <div class="query-result">
+                  <strong>Result 1</strong>
+                  <span>返回 200 行。这里后续会放成真正的结果标签或表格区域，而不是压缩在数据页底部。</span>
+                </div>
+                <div class="query-result">
+                  <strong>Result 2</strong>
+                  <span>影响 1 行。失败时按语句编号标记，并在这一页停住，不挤占表数据视图。</span>
+                </div>
+                <div class="query-result">
+                  <strong>History</strong>
+                  <span>执行批次、操作者、时间和结果摘要都在后端持久化，后续可从左侧 Queries / History 打开。</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="options">
+    <div class="option" data-choice="closer" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>这版更接近</h3>
+        <p>沿着这种对象树 + 顶部文档标签 + 独立查询页继续细化。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="even-more-navicat" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>还要更像 Navicat</h3>
+        <p>下一轮我继续往桌面客户端味道靠，比如更重的对象图标、结果页签、连接节点层级。</p>
+      </div>
+    </div>
+  </div>
+</div>

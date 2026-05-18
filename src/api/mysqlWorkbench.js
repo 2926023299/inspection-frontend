@@ -1,8 +1,20 @@
-import http from './http'
+import http, { buildRequestUrl } from './http'
 
 export function listMysqlWorkbenchTree(includeSystemSchemas = false) {
   return http.get('/mysql-workbench/tree', {
     params: { includeSystemSchemas },
+  })
+}
+
+export function listMysqlSchemas(includeSystemSchemas = false) {
+  return http.get('/mysql-workbench/schemas', {
+    params: { includeSystemSchemas },
+  })
+}
+
+export function listMysqlSchemaTables(schema, params = {}) {
+  return http.get(`/mysql-workbench/schemas/${encodeURIComponent(schema)}/tables`, {
+    params,
   })
 }
 
@@ -66,4 +78,20 @@ export function saveMysqlQuery(payload) {
 
 export function deleteMysqlSavedQuery(queryId) {
   return http.delete(`/mysql-workbench/queries/${queryId}`)
+}
+
+export function createMysqlExportJob(payload) {
+  return http.post('/mysql-workbench/exports', payload)
+}
+
+export function listMysqlExportJobs(params = {}) {
+  return http.get('/mysql-workbench/exports', { params })
+}
+
+export function getMysqlExportJob(jobId) {
+  return http.get(`/mysql-workbench/exports/${jobId}`)
+}
+
+export function buildMysqlExportDownloadUrl(jobId) {
+  return buildRequestUrl(`/mysql-workbench/exports/${encodeURIComponent(jobId)}/download`)
 }

@@ -3,27 +3,26 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   deleteMysqlSavedQuery,
   executeMysqlSqlBatch,
+  listMysqlSchemas,
+  listMysqlSchemaTables,
   listMysqlSavedQueries,
-  listMysqlWorkbenchTree,
   saveMysqlQuery,
 } from '@/api/mysqlWorkbench'
 import {
+  buildMysqlSchemaNode,
   buildMysqlSavedQueryNode,
+  createMysqlTableDataState,
   createMysqlQueryPresentationState,
   detectDangerousSql,
+  resolveMysqlExecutableSql,
   getMysqlQueryTabTreeKey,
   getMysqlTableTabKey,
   getMysqlTableTabTitle,
+  patchMysqlTableDataState,
   setMysqlQueryEditMode,
   setMysqlQueryResultFocusMode,
+  upsertMysqlSchemaTables,
 } from '@/utils/mysqlWorkbench'
-
-function cloneTreeNodes(nodes = []) {
-  return nodes.map((node) => ({
-    ...node,
-    children: cloneTreeNodes(node.children || []),
-  }))
-}
 
 function findFirstTableNode(nodes = []) {
   for (const node of nodes) {
@@ -57,8 +56,8 @@ export function useMysqlWorkbench() {
   const tabs = ref([])
   const activeTabKey = ref('')
   const querySeed = ref(1)
+  const runtimeQueryNodes = ref([])
 
-  const queryTabs = computed(() => tabs.value.filter((tab) => tab.type === 'query'))
   const schemaOptions = computed(() =>
     treeNodes.value
       .filter((node) => node.type === 'schema')
@@ -66,32 +65,40 @@ export function useMysqlWorkbench() {
   )
 
   const displayTreeNodes = computed(() => {
-    const nodes = cloneTreeNodes(treeNodes.value)
-    nodes.unshift({
+    return [
+      {
       key: 'queries-root',
       label: 'Queries',
       type: 'queries-root',
       children: [
         ...savedQueries.value.map(buildMysqlSavedQueryNode),
-        ...queryTabs.value.filter((tab) => !tab.savedQueryId).map(buildQueryNode),
+        ...runtimeQueryNodes.value,
       ],
-    })
-    nodes.push({
-      key: 'history-root',
-      label: 'History',
-      type: 'history-root',
-      children: [],
-    })
-    return nodes
+      },
+      ...treeNodes.value,
+      {
+        key: 'history-root',
+        label: 'History',
+        type: 'history-root',
+        children: [],
+      },
+    ]
   })
 
   const activeTab = computed(() => tabs.value.find((tab) => tab.key === activeTabKey.value) || null)
+
+  function syncRuntimeQueryNodes() {
+    runtimeQueryNodes.value = tabs.value
+      .filter((tab) => tab.type === 'query' && !tab.savedQueryId)
+      .map(buildQueryNode)
+  }
 
   async function loadTree({ preserveSelection = true, openFirstTable = false } = {}) {
     treeLoading.value = true
     error.value = ''
     try {
-      const nodes = await listMysqlWorkbenchTree(includeSystemSchemas.value)
+      const schemas = await listMysqlSchemas(includeSystemSchemas.value)
+      const nodes = (schemas || []).map(buildMysqlSchemaNode)
       treeNodes.value = nodes
       try {
         const queries = await listMysqlSavedQueries()
@@ -101,7 +108,11 @@ export function useMysqlWorkbench() {
       }
 
       if (!preserveSelection || !activeTreeKey.value) {
-        const firstTableNode = findFirstTableNode(nodes)
+        let firstTableNode = findFirstTableNode(nodes)
+        if (!firstTableNode && openFirstTable && nodes[0]) {
+          await loadSchemaTables(nodes[0].label)
+          firstTableNode = findFirstTableNode(treeNodes.value)
+        }
         if (firstTableNode) {
           activeTreeKey.value = firstTableNode.key
           if (openFirstTable && !tabs.value.length) {
@@ -115,6 +126,28 @@ export function useMysqlWorkbench() {
       treeNodes.value = []
     } finally {
       treeLoading.value = false
+    }
+  }
+
+  async function loadSchemaTables(schema, { page = 1, pageSize = 100, keyword = '' } = {}) {
+    if (!schema) return null
+    treeNodes.value = treeNodes.value.map((node) => (
+      node.type === 'schema' && node.label === schema ? { ...node, loading: true } : node
+    ))
+    try {
+      const result = await listMysqlSchemaTables(schema, { page, pageSize, keyword })
+      treeNodes.value = upsertMysqlSchemaTables(treeNodes.value, schema, result.items || [], {
+        page: result.page || page,
+        hasNext: result.hasNext,
+        keyword: result.keyword ?? keyword,
+      })
+      return result
+    } catch (requestError) {
+      error.value = requestError.message || `加载 ${schema} 表列表失败`
+      treeNodes.value = treeNodes.value.map((node) => (
+        node.type === 'schema' && node.label === schema ? { ...node, loading: false } : node
+      ))
+      return null
     }
   }
 
@@ -150,7 +183,10 @@ export function useMysqlWorkbench() {
     }
 
     const wasActive = activeTabKey.value === key
-    tabs.value.splice(index, 1)
+    const [closedTab] = tabs.value.splice(index, 1)
+    if (closedTab?.type === 'query') {
+      syncRuntimeQueryNodes()
+    }
     if (!wasActive) {
       return
     }
@@ -166,6 +202,7 @@ export function useMysqlWorkbench() {
 
   function closeAllTabs() {
     tabs.value = []
+    runtimeQueryNodes.value = []
     activeTabKey.value = ''
   }
 
@@ -187,6 +224,9 @@ export function useMysqlWorkbench() {
       pinned,
       reloadToken: 0,
       previewStatements: [],
+    }
+    if (type === 'data') {
+      tab.dataState = createMysqlTableDataState()
     }
 
     if (!pinned) {
@@ -226,12 +266,17 @@ export function useMysqlWorkbench() {
       executing: false,
       batchId: null,
       dangerous: false,
+      lastExecutedSql: '',
+      lastExecutionUsedSelection: false,
       saveStatus: initial.savedQueryId || initial.id ? 'saved' : 'draft',
       saveError: '',
       reloadToken: 0,
       ...createMysqlQueryPresentationState(),
     }
     tabs.value.push(tab)
+    if (!tab.savedQueryId) {
+      syncRuntimeQueryNodes()
+    }
     activateTab(key)
     return tab
   }
@@ -263,6 +308,14 @@ export function useMysqlWorkbench() {
     if (node.type === 'table') {
       const [schema, table] = node.key.replace(/^table:/, '').split('.')
       openTableTab(schema, table, 'data')
+      return
+    }
+
+    if (node.type === 'schema') {
+      const current = treeNodes.value.find((item) => item.key === node.key)
+      if (current && !current.loaded && !current.loading) {
+        loadSchemaTables(current.label)
+      }
       return
     }
 
@@ -301,6 +354,17 @@ export function useMysqlWorkbench() {
       return
     }
     Object.assign(tab, patch)
+    if (tab.type === 'query' && Object.prototype.hasOwnProperty.call(patch, 'title')) {
+      syncRuntimeQueryNodes()
+    }
+  }
+
+  function updateTableDataState(key, patch) {
+    const tab = tabs.value.find((item) => item.key === key)
+    if (!tab || tab.type !== 'data') {
+      return
+    }
+    tab.dataState = patchMysqlTableDataState(tab.dataState || createMysqlTableDataState(), patch)
   }
 
   function showQueryEditMode(key) {
@@ -348,6 +412,7 @@ export function useMysqlWorkbench() {
       tab.saveStatus = 'saved'
       tab.saveError = ''
       upsertSavedQuery(savedQuery)
+      syncRuntimeQueryNodes()
     } catch (requestError) {
       tab.saveStatus = 'failed'
       tab.saveError = requestError.message || '查询保存失败'
@@ -391,18 +456,23 @@ export function useMysqlWorkbench() {
     })
   }
 
-  async function executeQueryTab(key, { forceConfirmed = false } = {}) {
+  async function executeQueryTab(key, { forceConfirmed = false, sqlOverride = null, usedSelection = false } = {}) {
     const tab = tabs.value.find((item) => item.key === key)
     if (!tab || tab.executing) {
       return
     }
 
-    if (!String(tab.sql || '').trim()) {
+    const resolvedSql = sqlOverride === null || sqlOverride === undefined
+      ? resolveMysqlExecutableSql({ sql: tab.sql })
+      : { sql: String(sqlOverride || '').trim(), hasSelection: Boolean(usedSelection) }
+    const executableSql = resolvedSql.sql
+
+    if (!executableSql) {
       ElMessage.warning('请输入要执行的 SQL')
       return
     }
 
-    if (detectDangerousSql(tab.sql) && !forceConfirmed) {
+    if (detectDangerousSql(executableSql) && !forceConfirmed) {
       await ElMessageBox.confirm(
         '检测到可能的高风险 SQL，确认后才会继续执行。',
         '危险 SQL 确认',
@@ -412,7 +482,11 @@ export function useMysqlWorkbench() {
           cancelButtonText: '取消',
         },
       )
-      return executeQueryTab(key, { forceConfirmed: true })
+      return executeQueryTab(key, {
+        forceConfirmed: true,
+        sqlOverride: executableSql,
+        usedSelection: resolvedSql.hasSelection,
+      })
     }
 
     tab.executing = true
@@ -420,7 +494,7 @@ export function useMysqlWorkbench() {
       await saveQueryTab(tab)
       const result = await executeMysqlSqlBatch({
         schema: tab.schema || '',
-        sql: tab.sql,
+        sql: executableSql,
         confirmed: forceConfirmed,
       })
       tab.results = result.results || []
@@ -428,6 +502,8 @@ export function useMysqlWorkbench() {
       tab.dangerous = Boolean(result.dangerous)
       tab.executionStatus = result.status || (result.success === false ? 'FAILED' : 'SUCCESS')
       tab.executionMessage = result.message || ''
+      tab.lastExecutedSql = executableSql
+      tab.lastExecutionUsedSelection = resolvedSql.hasSelection
       setMysqlQueryResultFocusMode(tab)
       if (result.success === false) {
         ElMessage.error(result.message || `第 ${result.failedStatementIndex || '?'} 条 SQL 执行失败`)
@@ -454,6 +530,7 @@ export function useMysqlWorkbench() {
     schemaOptions,
     savedQueries,
     loadTree,
+    loadSchemaTables,
     toggleSystemSchemas,
     activateTab,
     closeTab,
@@ -465,6 +542,7 @@ export function useMysqlWorkbench() {
     handleTreeNodeSelect,
     handleTreeNodeSelectPinned,
     updateQueryTab,
+    updateTableDataState,
     saveQueryTab,
     showQueryEditMode,
     showQueryResultFocus,

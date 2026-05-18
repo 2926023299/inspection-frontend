@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, onBeforeUnmount, nextTick } from 'vue'
 
 const props = defineProps({
   nodes: {
@@ -20,7 +20,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['select-node', 'select-node-pinned', 'refresh', 'toggle-system', 'new-query', 'open-history', 'context-action', 'import-sql', 'toggle-collapse'])
+const emit = defineEmits(['select-node', 'select-node-pinned', 'refresh', 'toggle-system', 'new-query', 'open-history', 'open-exports', 'context-action', 'import-sql', 'toggle-collapse', 'load-schema-tables'])
 
 const treeRef = ref(null)
 const filterText = ref('')
@@ -38,6 +38,11 @@ watch(filterText, (value) => {
   treeRef.value?.filter(value)
 })
 
+watch(() => props.nodes, async () => {
+  await nextTick()
+  treeRef.value?.filter(filterText.value)
+}, { flush: 'post' })
+
 function filterNode(value, node) {
   if (!value) return true
   return String(node.label || '').toLowerCase().includes(value.toLowerCase())
@@ -49,6 +54,23 @@ function handleNodeClick(node) {
 
 function handleNodeDblclick(node) {
   emit('select-node-pinned', node)
+}
+
+function handleNodeExpand(node) {
+  if (node?.type === 'schema' && !node.loaded && !node.loading) {
+    emit('load-schema-tables', { schema: node.label, page: 1 })
+  }
+}
+
+function handleLoadMoreTables(event, node) {
+  event.stopPropagation()
+  if (node?.type === 'schema' && node.hasMoreTables && !node.loading) {
+    emit('load-schema-tables', {
+      schema: node.label,
+      page: (node.tablePage || 1) + 1,
+      keyword: node.tableKeyword || '',
+    })
+  }
 }
 
 function handleNodeContextmenu(event, node) {
@@ -161,6 +183,7 @@ onBeforeUnmount(stopListener)
         <div class="object-tree-panel__actions">
           <el-button size="small" type="primary" @click="$emit('new-query')">新建查询</el-button>
           <el-button size="small" @click="$emit('open-history')">历史</el-button>
+          <el-button size="small" @click="$emit('open-exports')">导出任务</el-button>
           <el-button size="small" @click="$emit('refresh')">刷新</el-button>
         </div>
 
@@ -188,17 +211,27 @@ onBeforeUnmount(stopListener)
             :data="nodes"
             :current-node-key="selectedKey"
             :expand-on-click-node="false"
-            :default-expand-all="true"
+            :default-expanded-keys="['queries-root']"
             :filter-node-method="filterNode"
             :props="{ label: 'label', children: 'children' }"
             highlight-current
             @node-click="handleNodeClick"
+            @node-expand="handleNodeExpand"
             @node-contextmenu="handleNodeContextmenu"
           >
             <template #default="{ data }">
               <div class="object-tree-node" @dblclick.stop="handleNodeDblclick(data)">
                 <span class="object-tree-node__kind">{{ data.type }}</span>
                 <span class="object-tree-node__label">{{ data.label }}</span>
+                <span v-if="data.loading" class="object-tree-node__meta">加载中</span>
+                <button
+                  v-else-if="data.type === 'schema' && data.hasMoreTables"
+                  class="object-tree-node__more"
+                  type="button"
+                  @click="handleLoadMoreTables($event, data)"
+                >
+                  更多
+                </button>
               </div>
             </template>
           </el-tree>
@@ -367,9 +400,34 @@ onBeforeUnmount(stopListener)
 }
 
 .object-tree-node__label {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.object-tree-node__meta {
+  flex-shrink: 0;
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.object-tree-node__more {
+  flex-shrink: 0;
+  min-height: 22px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(23, 36, 55, 0.08);
+  color: var(--text-subtle);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.object-tree-node__more:hover {
+  background: rgba(195, 95, 55, 0.14);
+  color: var(--brand-strong);
 }
 
 :deep(.el-tree) {

@@ -1,0 +1,575 @@
+<style>
+  .full-data-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .full-data-shell {
+    border-radius: 28px;
+    overflow: hidden;
+    border: 1px solid rgba(36, 42, 49, 0.12);
+    background:
+      radial-gradient(circle at top right, rgba(195, 95, 55, 0.1), transparent 24%),
+      linear-gradient(180deg, rgba(250, 246, 238, 0.98), rgba(243, 236, 226, 0.98));
+    box-shadow: 0 28px 68px rgba(63, 55, 43, 0.18);
+  }
+
+  .full-data-window {
+    display: grid;
+    grid-template-columns: 72px 286px minmax(0, 1fr);
+    min-height: 860px;
+  }
+
+  .nav-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px 12px;
+    background: linear-gradient(180deg, #162335 0%, #0f1a29 100%);
+    color: #f6efe5;
+  }
+
+  .nav-rail__brand {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 8px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(195, 95, 55, 0.34), rgba(255, 255, 255, 0.06));
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .nav-rail__item {
+    display: grid;
+    place-items: center;
+    min-height: 54px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(246, 239, 229, 0.64);
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .nav-rail__item.active {
+    color: #fff6ef;
+    background: linear-gradient(180deg, rgba(195, 95, 55, 0.26), rgba(255, 255, 255, 0.05));
+    border-color: rgba(195, 95, 55, 0.3);
+  }
+
+  .tree-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 14px 16px 16px;
+    border-right: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(247, 241, 231, 0.86);
+  }
+
+  .tree-card,
+  .tree-body,
+  .surface-window,
+  .surface-tabs,
+  .surface-toolbar,
+  .surface-content,
+  .status-strip {
+    border-radius: 20px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.9);
+  }
+
+  .tree-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .tree-card strong {
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+
+  .tree-card span,
+  .tree-note,
+  .toolbar-title span,
+  .status-strip span {
+    color: #6c757f;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .chip-row,
+  .toolbar-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip-row span,
+  .toolbar-chip-row span,
+  .toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(30, 42, 51, 0.05);
+    color: #495963;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .toolbar-button.primary {
+    background: rgba(195, 95, 55, 0.14);
+    border-color: rgba(195, 95, 55, 0.24);
+    color: #964025;
+  }
+
+  .tree-search {
+    min-height: 40px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    border-radius: 14px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(255, 252, 247, 0.94);
+    color: #7c8289;
+    font-size: 13px;
+  }
+
+  .tree-body {
+    flex: 1;
+    min-height: 0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tree-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 16px;
+    background: rgba(30, 42, 51, 0.03);
+  }
+
+  .tree-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 34px;
+    padding: 0 10px;
+    border-radius: 12px;
+    color: #33414b;
+    font-size: 13px;
+  }
+
+  .tree-line.active {
+    background: linear-gradient(90deg, rgba(195, 95, 55, 0.2), rgba(255, 255, 255, 0.82));
+    border: 1px solid rgba(195, 95, 55, 0.18);
+    color: #2e3941;
+  }
+
+  .indent-1 {
+    padding-left: 24px;
+  }
+
+  .indent-2 {
+    padding-left: 46px;
+  }
+
+  .workspace-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 14px 16px 16px;
+    gap: 12px;
+    background:
+      linear-gradient(90deg, rgba(30, 42, 51, 0.03) 1px, transparent 1px),
+      linear-gradient(rgba(30, 42, 51, 0.03) 1px, transparent 1px),
+      rgba(249, 244, 237, 0.84);
+    background-size: 42px 42px, 42px 42px, auto;
+  }
+
+  .surface-window {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(63, 55, 43, 0.1);
+  }
+
+  .surface-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid rgba(36, 42, 49, 0.08);
+    border-radius: 0;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(245, 239, 231, 0.92));
+  }
+
+  .doc-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 14px 14px 10px 10px;
+    border: 1px solid rgba(36, 42, 49, 0.08);
+    background: rgba(30, 42, 51, 0.04);
+    color: #5e6c74;
+    font-size: 13px;
+  }
+
+  .doc-tab.active {
+    background: linear-gradient(180deg, rgba(195, 95, 55, 0.16), rgba(255, 255, 255, 0.96));
+    color: #8f3d22;
+    border-color: rgba(195, 95, 55, 0.22);
+    box-shadow: 0 8px 16px rgba(195, 95, 55, 0.08);
+  }
+
+  .doc-tab.sql {
+    background: rgba(22, 35, 53, 0.08);
+  }
+
+  .surface-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 58px;
+    padding: 10px 14px;
+    border: 0;
+    border-bottom: 1px solid rgba(36, 42, 49, 0.08);
+    border-radius: 0;
+  }
+
+  .toolbar-title {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .toolbar-title strong {
+    font-size: 19px;
+    letter-spacing: 0.04em;
+  }
+
+  .surface-content {
+    border: 0;
+    border-radius: 0;
+    flex: 1;
+    min-height: 0;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: hidden;
+  }
+
+  .data-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .data-toolbar strong {
+    font-size: 14px;
+    letter-spacing: 0.05em;
+  }
+
+  .grid-shell {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(36, 42, 49, 0.1);
+    background: rgba(255, 252, 247, 0.86);
+  }
+
+  .grid-header,
+  .grid-row {
+    display: grid;
+    grid-template-columns: 74px 146px 128px 124px 156px 148px 1fr;
+  }
+
+  .grid-header {
+    background: rgba(23, 36, 55, 0.96);
+    color: #f8f1e8;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+
+  .grid-header span,
+  .grid-row span {
+    padding: 12px 14px;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .grid-rows {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .grid-row {
+    background: rgba(255, 252, 247, 0.86);
+    color: #32404b;
+    font-size: 13px;
+  }
+
+  .grid-row:nth-child(even) {
+    background: rgba(249, 243, 236, 0.96);
+  }
+
+  .grid-row.selected {
+    background: linear-gradient(90deg, rgba(195, 95, 55, 0.14), rgba(255, 252, 247, 0.9));
+  }
+
+  .status-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  .status-strip strong {
+    font-size: 12px;
+    color: #43515b;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 1280px) {
+    .full-data-window {
+      grid-template-columns: 72px 250px minmax(0, 1fr);
+    }
+
+    .grid-header,
+    .grid-row {
+      grid-template-columns: 64px 130px 110px 110px 136px 124px 1fr;
+    }
+  }
+</style>
+
+<div class="full-data-preview">
+  <h2>完整数据页版本</h2>
+  <p class="subtitle">这次我把数据标签做成接近 Navicat 的“整页数据网格”：左边仍保留对象树，但右边主工作区不再分右侧摘要区，数据表独占完整内容面。</p>
+
+  <div class="mockup full-data-shell">
+    <div class="mockup-body full-data-window">
+      <aside class="nav-rail">
+        <div class="nav-rail__brand">IO</div>
+        <div class="nav-rail__item">工作台</div>
+        <div class="nav-rail__item">巡检</div>
+        <div class="nav-rail__item">连接</div>
+        <div class="nav-rail__item active">MySQL</div>
+        <div class="nav-rail__item">图模</div>
+      </aside>
+
+      <aside class="tree-panel">
+        <div class="tree-card">
+          <strong>MySQL Browser</strong>
+          <span>保留 Navicat 式对象树，但不再压缩数据标签的主工作区。</span>
+          <div class="chip-row">
+            <span>localhost:3306</span>
+            <span>inspection</span>
+            <span>单实例多库</span>
+          </div>
+          <div class="tree-search">过滤 schema / tables / views / queries</div>
+        </div>
+
+        <div class="tree-body">
+          <div class="tree-block">
+            <div class="tree-line">▾ Connection / local-mysql</div>
+            <div class="tree-line indent-1">▾ Schema / inspection</div>
+            <div class="tree-line indent-2">▾ Tables</div>
+            <div class="tree-line indent-2 active">device_status</div>
+            <div class="tree-line indent-2">job_record</div>
+            <div class="tree-line indent-2">inspection_log</div>
+            <div class="tree-line indent-1">▸ Views</div>
+            <div class="tree-line indent-1">▸ Queries</div>
+          </div>
+
+          <div class="tree-block">
+            <div class="tree-line">▾ Schema / ies_ls</div>
+            <div class="tree-line indent-1">breaker_energy_data</div>
+            <div class="tree-line indent-1">inspection_table</div>
+          </div>
+
+          <div class="tree-block">
+            <div class="tree-line">▸ Schema / archive</div>
+            <div class="tree-line">▸ System Schemas</div>
+          </div>
+        </div>
+
+        <p class="tree-note">对象摘要、字段详情、索引信息都不再占右边数据页宽度，改放到 `设计` / `DDL` 标签或按需抽屉里。</p>
+      </aside>
+
+      <section class="workspace-panel">
+        <div class="surface-window">
+          <div class="surface-tabs">
+            <div class="doc-tab active">device_status / Data</div>
+            <div class="doc-tab">device_status / Design</div>
+            <div class="doc-tab">device_status / DDL</div>
+            <div class="doc-tab sql">query_1.sql</div>
+            <div class="doc-tab">History</div>
+          </div>
+
+          <div class="surface-toolbar">
+            <div class="toolbar-title">
+              <strong>inspection.device_status</strong>
+              <span>当前是完整数据页，右边没有摘要面板，表格横向空间全部还给数据视图。</span>
+            </div>
+            <div class="toolbar-chip-row">
+              <span>Rows 1-50</span>
+              <span>PK Editable</span>
+              <span>42 ms</span>
+              <span class="toolbar-button">刷新</span>
+              <span class="toolbar-button">新增</span>
+              <span class="toolbar-button">删除</span>
+              <span class="toolbar-button primary">打开 SQL 标签</span>
+            </div>
+          </div>
+
+          <div class="surface-content">
+            <div class="data-toolbar">
+              <strong>Data Grid</strong>
+              <div class="toolbar-chip-row">
+                <span>分页浏览</span>
+                <span>列筛选</span>
+                <span>排序</span>
+                <span>行编辑</span>
+                <span>CSV 导出</span>
+              </div>
+            </div>
+
+            <div class="grid-shell">
+              <div class="grid-header">
+                <span>id</span>
+                <span>device_code</span>
+                <span>city_name</span>
+                <span>status</span>
+                <span>updated_at</span>
+                <span>operator</span>
+                <span>remark</span>
+              </div>
+              <div class="grid-rows">
+                <div class="grid-row">
+                  <span>1021</span>
+                  <span>FZ-RTU-0201</span>
+                  <span>福州</span>
+                  <span>ONLINE</span>
+                  <span>2026-04-29 15:08</span>
+                  <span>admin</span>
+                  <span>线路状态正常，采样频率稳定</span>
+                </div>
+                <div class="grid-row selected">
+                  <span>1024</span>
+                  <span>XM-RTU-0914</span>
+                  <span>厦门</span>
+                  <span>OFFLINE</span>
+                  <span>2026-04-29 15:14</span>
+                  <span>admin</span>
+                  <span>当前选中行，直接在表格内编辑，不再被右侧信息栏挤占</span>
+                </div>
+                <div class="grid-row">
+                  <span>1088</span>
+                  <span>QZ-RTU-1120</span>
+                  <span>泉州</span>
+                  <span>WARNING</span>
+                  <span>2026-04-29 15:18</span>
+                  <span>ops01</span>
+                  <span>通信质量波动，等待人工复核</span>
+                </div>
+                <div class="grid-row">
+                  <span>1096</span>
+                  <span>PT-RTU-0186</span>
+                  <span>莆田</span>
+                  <span>ONLINE</span>
+                  <span>2026-04-29 15:20</span>
+                  <span>ops01</span>
+                  <span>最近 5 分钟无异常</span>
+                </div>
+                <div class="grid-row">
+                  <span>1113</span>
+                  <span>ND-RTU-0062</span>
+                  <span>宁德</span>
+                  <span>ONLINE</span>
+                  <span>2026-04-29 15:22</span>
+                  <span>admin</span>
+                  <span>自动巡检通过，负荷值正常</span>
+                </div>
+                <div class="grid-row">
+                  <span>1128</span>
+                  <span>SM-RTU-0219</span>
+                  <span>三明</span>
+                  <span>WARNING</span>
+                  <span>2026-04-29 15:23</span>
+                  <span>ops02</span>
+                  <span>电压采样抖动，需要进一步比对</span>
+                </div>
+                <div class="grid-row">
+                  <span>1146</span>
+                  <span>LY-RTU-1035</span>
+                  <span>龙岩</span>
+                  <span>OFFLINE</span>
+                  <span>2026-04-29 15:25</span>
+                  <span>admin</span>
+                  <span>已进入人工恢复流程，等待线路恢复</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="status-strip">
+              <strong>50 rows per page | Total 1,204 | Row 1024 selected</strong>
+              <span>像 Navicat 一样，把状态信息压到下方细条里，而不是占一个完整侧栏。</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="options">
+    <div class="option" data-choice="yes-full-page" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>这就是我要的</h3>
+        <p>数据页应该像这样完整铺开，其他信息退到别的标签或状态条。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="still-not-enough" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>还不够像</h3>
+        <p>继续往 Navicat 靠，比如对象树层级、图标和标签交互再重一点。</p>
+      </div>
+    </div>
+  </div>
+</div>
