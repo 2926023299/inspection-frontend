@@ -522,6 +522,7 @@ export function useMysqlWorkbench() {
     treeLoading,
     error,
     includeSystemSchemas,
+    treeNodes,
     displayTreeNodes,
     activeTreeKey,
     tabs,

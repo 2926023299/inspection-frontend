@@ -16,6 +16,7 @@ const menuItems = [
   { path: '/mysql', title: 'MySQL工作台', caption: '数据与结构' },
   { path: '/java', title: 'Java巡检', caption: '进程与差异' },
   { path: '/topology', title: '图模巡检', caption: '中压/低压统计' },
+  { path: '/tools', title: '工具合集', caption: '实用工具' },
 ]
 
 const activeMenu = computed(() => route.meta.menuKey || route.path)
@@ -138,6 +139,7 @@ function toggleSidebar() {
   background: var(--rail-bg);
   color: #f5efe7;
   min-height: 0;
+  overflow: hidden;
 }
 
 .layout-sidebar.is-collapsed {
@@ -243,6 +245,29 @@ function toggleSidebar() {
   flex-direction: column;
   gap: 8px;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.menu-stack::-webkit-scrollbar {
+  width: 4px;
+}
+
+.menu-stack::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menu-stack::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.menu-stack::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .menu-item {
@@ -302,7 +327,7 @@ function toggleSidebar() {
 
 .sidebar-toggle {
   width: 100%;
-  margin-top: auto;
+  flex-shrink: 0;
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
@@ -311,7 +336,7 @@ function toggleSidebar() {
 }
 
 .sidebar-footer {
-  margin-top: auto;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;

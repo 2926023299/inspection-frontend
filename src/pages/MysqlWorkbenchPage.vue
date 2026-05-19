@@ -17,6 +17,7 @@ const {
   treeLoading,
   error,
   includeSystemSchemas,
+  treeNodes,
   displayTreeNodes,
   activeTreeKey,
   tabs,
@@ -258,6 +259,7 @@ async function handleImportSql({ file, schema }) {
             v-else-if="activeTab?.type === 'query'"
             :tab="activeTab"
             :schema-options="schemaOptions"
+            :tree-nodes="treeNodes"
             @change-title="updateQueryTab(activeTab.key, { title: $event })"
             @change-sql="updateQueryTab(activeTab.key, { sql: $event })"
             @change-schema="updateQueryTab(activeTab.key, { schema: $event })"

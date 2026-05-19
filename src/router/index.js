@@ -117,6 +117,42 @@ const routes = [
         },
       },
       {
+        path: 'tools',
+        name: 'Tools',
+        component: () => import('@/pages/tools/ToolsHome.vue'),
+        meta: {
+          title: '工具合集',
+          tabTitle: '工具合集',
+          menuKey: '/tools',
+          keepAlive: true,
+          breadcrumb: ['工具合集'],
+        },
+      },
+      {
+        path: 'tools/timestamp',
+        name: 'TimestampTool',
+        component: () => import('@/pages/tools/TimestampTool.vue'),
+        meta: {
+          title: '时间戳转换',
+          tabTitle: '时间戳转换',
+          menuKey: '/tools',
+          keepAlive: true,
+          breadcrumb: ['工具合集', '时间戳转换'],
+        },
+      },
+      {
+        path: 'tools/measure-id',
+        name: 'MeasureIdTool',
+        component: () => import('@/pages/tools/MeasureIdTool.vue'),
+        meta: {
+          title: '量测ID拼接',
+          tabTitle: '量测ID拼接',
+          menuKey: '/tools',
+          keepAlive: true,
+          breadcrumb: ['工具合集', '量测ID拼接'],
+        },
+      },
+      {
         path: 'history/:ip',
         name: 'History',
         component: () => import('@/pages/HistoryPage.vue'),

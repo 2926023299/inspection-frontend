@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import SqlEditor from './SqlEditor.vue'
 import VirtualResultTable from './VirtualResultTable.vue'
+import { getMysqlTableMetadata } from '@/api/mysqlWorkbench'
 import { formatMysqlResultRowCount, resolveMysqlExecutableSql } from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
@@ -14,7 +15,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  treeNodes: {
+    type: Array,
+    default: () => [],
+  },
 })
+
+// 缓存表的字段信息
+const tableColumnsCache = ref({})
 
 const emit = defineEmits([
   'change-sql',
@@ -30,6 +38,62 @@ const emit = defineEmits([
 
 const isEditMode = computed(() => props.tab.viewMode !== 'result-focus')
 const isResultFocusMode = computed(() => props.tab.viewMode === 'result-focus')
+
+// 构建 CodeMirror SQL 自动补全所需的 schema 格式
+const sqlSchema = computed(() => {
+  const schema = {}
+  for (const node of props.treeNodes) {
+    if (node.type === 'schema' && node.children?.length) {
+      const tables = {}
+      for (const child of node.children) {
+        if (child.type === 'table') {
+          const cacheKey = `${node.label}.${child.label}`
+          tables[child.label] = tableColumnsCache.value[cacheKey] || []
+        }
+      }
+      if (Object.keys(tables).length > 0) {
+        schema[node.label] = tables
+      }
+    }
+  }
+  console.log('sqlSchema computed:', schema)
+  return schema
+})
+
+// 获取表的字段信息并缓存
+async function loadTableColumns(schema, table) {
+  const cacheKey = `${schema}.${table}`
+  if (tableColumnsCache.value[cacheKey]) return
+
+  try {
+    const metadata = await getMysqlTableMetadata(schema, table)
+    const columns = (metadata?.columns || []).map(col => col.name)
+    tableColumnsCache.value = {
+      ...tableColumnsCache.value,
+      [cacheKey]: columns,
+    }
+  } catch {
+    // 静默失败
+  }
+}
+
+// 监听 treeNodes 变化，加载字段
+watch(() => props.treeNodes, async (nodes) => {
+  if (!nodes?.length) return
+
+  for (const node of nodes) {
+    if (node.type === 'schema' && node.children?.length) {
+      for (const child of node.children) {
+        if (child.type === 'table') {
+          const cacheKey = `${node.label}.${child.label}`
+          if (!tableColumnsCache.value[cacheKey]) {
+            await loadTableColumns(node.label, child.label)
+          }
+        }
+      }
+    }
+  }
+}, { immediate: true, deep: true })
 const shouldShowSqlPreview = computed(() => isResultFocusMode.value && props.tab.sqlPreviewExpanded)
 const sqlPreviewToggleText = computed(() => (shouldShowSqlPreview.value ? '收起 SQL' : '展开 SQL'))
 const editorRef = ref(null)
@@ -178,6 +242,7 @@ defineExpose({ flushSql })
         <SqlEditor
           ref="editorRef"
           :model-value="tab.sql"
+          :schema="sqlSchema"
           @update:model-value="$emit('change-sql', $event)"
           @selection-change="handleSelectionChange"
         />
