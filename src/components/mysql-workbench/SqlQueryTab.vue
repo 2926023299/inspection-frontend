@@ -56,7 +56,6 @@ const sqlSchema = computed(() => {
       }
     }
   }
-  console.log('sqlSchema computed:', schema)
   return schema
 })
 

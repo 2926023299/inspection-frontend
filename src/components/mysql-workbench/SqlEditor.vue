@@ -1,10 +1,11 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { EditorState, Facet } from '@codemirror/state'
+import { Compartment, EditorState, Facet } from '@codemirror/state'
 import { EditorView, basicSetup } from 'codemirror'
-import { MySQL, sql, keywordCompletionSource } from '@codemirror/lang-sql'
+import { MySQL, sql } from '@codemirror/lang-sql'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { autocompletion } from '@codemirror/autocomplete'
+import { tooltips } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { createDebouncedSqlSync } from '@/utils/mysqlWorkbench'
 
@@ -24,6 +25,7 @@ const emit = defineEmits(['update:modelValue', 'selection-change'])
 const editorHost = ref(null)
 let editorView = null
 let selectedSql = ''
+const sqlExtensionCompartment = new Compartment()
 
 const sync = createDebouncedSqlSync(props.modelValue, (value) => {
   emit('update:modelValue', value)
@@ -254,16 +256,18 @@ function updateSelectedSql() {
 
 onMounted(() => {
   const sqlExts = createSqlExtension(props.schema)
+  const tooltipParent = editorHost.value?.ownerDocument?.body || document.body
   editorView = new EditorView({
     parent: editorHost.value,
     state: EditorState.create({
       doc: props.modelValue || '',
       extensions: [
         basicSetup,
-        ...sqlExts,
+        sqlExtensionCompartment.of(sqlExts),
         autocompletion({
           add: [tableAndAliasCompletionSource],
         }),
+        tooltips({ parent: tooltipParent, position: 'fixed' }),
         EditorView.lineWrapping,
         mysqlEditorTheme,
         syntaxHighlighting(sqlHighlightStyle),
@@ -301,6 +305,18 @@ watch(
         },
       })
     }
+  },
+)
+
+watch(
+  () => props.schema,
+  (schema) => {
+    if (!editorView) {
+      return
+    }
+    editorView.dispatch({
+      effects: sqlExtensionCompartment.reconfigure(createSqlExtension(schema)),
+    })
   },
 )
 

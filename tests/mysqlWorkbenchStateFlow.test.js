@@ -36,3 +36,19 @@ test('object tree reapplies local filter when tree nodes change', () => {
   assert.match(treeSource, /watch\(\s*\(\) => props\.nodes/)
   assert.match(treeSource, /treeRef\.value\?\.filter\(filterText\.value\)/)
 })
+
+test('sql editor mounts completion tooltip outside transformed workbench panels', () => {
+  const editorSource = readSource('src/components/mysql-workbench/SqlEditor.vue')
+
+  assert.match(editorSource, /import\s+\{[^}]*tooltips[^}]*\}\s+from\s+'@codemirror\/view'/)
+  assert.match(editorSource, /tooltips\(\{\s*parent:\s*tooltipParent,\s*position:\s*'fixed'/)
+})
+
+test('sql editor refreshes completion schema after table metadata loads', () => {
+  const editorSource = readSource('src/components/mysql-workbench/SqlEditor.vue')
+  const queryTabSource = readSource('src/components/mysql-workbench/SqlQueryTab.vue')
+
+  assert.match(editorSource, /new Compartment\(\)/)
+  assert.match(editorSource, /sqlExtensionCompartment\.reconfigure\(createSqlExtension\(schema\)\)/)
+  assert.doesNotMatch(queryTabSource, /console\.log\(/)
+})
