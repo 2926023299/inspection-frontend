@@ -50,6 +50,12 @@ body,
   min-height: 100vh;
 }
 
+html.is-fixed-viewport-route,
+body.is-fixed-viewport-route {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   position: relative;
   margin: 0;

@@ -41,6 +41,7 @@ const {
   markTableTabsStale,
   updateTablePreview,
   executeQueryTab,
+  cancelQueryTab,
   saveQueryTab,
   showQueryEditMode,
   toggleQuerySqlPreview,
@@ -264,6 +265,7 @@ async function handleImportSql({ file, schema }) {
             @change-sql="updateQueryTab(activeTab.key, { sql: $event })"
             @change-schema="updateQueryTab(activeTab.key, { schema: $event })"
             @execute="executeQueryTab(activeTab.key, $event)"
+            @cancel-execution="cancelQueryTab(activeTab.key)"
             @save="saveQueryTab(activeTab)"
             @open-history="handleOpenHistoryFromQuery"
             @show-edit-mode="showQueryEditMode(activeTab.key)"
@@ -289,7 +291,9 @@ async function handleImportSql({ file, schema }) {
 
 <style scoped>
 .mysql-workbench-page {
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .mysql-workbench-layout {
@@ -297,6 +301,7 @@ async function handleImportSql({ file, schema }) {
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 14px;
   flex: 1;
+  height: 100%;
   min-height: 0;
   transition: grid-template-columns 0.25s ease;
 }
@@ -310,6 +315,7 @@ async function handleImportSql({ file, schema }) {
   flex-direction: column;
   gap: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .mysql-workbench-main__surface {
@@ -323,9 +329,15 @@ async function handleImportSql({ file, schema }) {
   justify-content: center;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 760px) {
   .mysql-workbench-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 280px) minmax(0, 1fr);
+  }
+
+  .mysql-workbench-layout.is-tree-collapsed {
+    grid-template-columns: 1fr;
+    grid-template-rows: 48px minmax(0, 1fr);
   }
 }
 </style>

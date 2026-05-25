@@ -49,6 +49,50 @@ test('sql editor refreshes completion schema after table metadata loads', () => 
   const queryTabSource = readSource('src/components/mysql-workbench/SqlQueryTab.vue')
 
   assert.match(editorSource, /new Compartment\(\)/)
-  assert.match(editorSource, /sqlExtensionCompartment\.reconfigure\(createSqlExtension\(schema\)\)/)
+  assert.match(editorSource, /sqlExtensionCompartment\.reconfigure\(createSqlExtension\(schema,\s*defaultSchema\)\)/)
   assert.doesNotMatch(queryTabSource, /console\.log\(/)
+})
+
+test('sql query tab does not preload every table column from tree changes', () => {
+  const queryTabSource = readSource('src/components/mysql-workbench/SqlQueryTab.vue')
+
+  assert.doesNotMatch(queryTabSource, /getMysqlTableMetadata/)
+  assert.doesNotMatch(queryTabSource, /watch\(\s*\(\) => props\.treeNodes[\s\S]*loadTableColumns/)
+  assert.match(queryTabSource, /:load-table-columns="loadTableColumns"/)
+})
+
+test('sql editor asks for table columns only when completing table or alias fields', () => {
+  const editorSource = readSource('src/components/mysql-workbench/SqlEditor.vue')
+
+  assert.match(editorSource, /loadTableColumns:\s*\{/)
+  assert.match(editorSource, /async function tableAndAliasCompletionSource/)
+  assert.match(editorSource, /props\.loadTableColumns/)
+  assert.match(editorSource, /function schemaAndTableCompletionSource\(config\)/)
+  assert.match(editorSource, /context\.matchBefore\(\/\(\?:`\[\^`\]\+`\|\\w\+\)\\\.\/\)/)
+  assert.match(editorSource, /override:\s*\[[\s\S]*tableAndAliasCompletionSource[\s\S]*schemaAndTableCompletionSource\(sqlConfig\)/)
+  assert.doesNotMatch(editorSource, /add:\s*\[tableAndAliasCompletionSource\]/)
+})
+
+test('sql execution request has a longer timeout than ordinary api calls', () => {
+  const apiSource = readSource('src/api/mysqlWorkbench.js')
+
+  assert.match(apiSource, /MYSQL_WORKBENCH_SQL_EXECUTE_TIMEOUT_MS\s*=\s*600000/)
+  assert.match(apiSource, /http\.post\('\/mysql-workbench\/sql\/execute',\s*payload,\s*\{[\s\S]*timeout:\s*MYSQL_WORKBENCH_SQL_EXECUTE_TIMEOUT_MS/)
+})
+
+test('sql query executions are submitted asynchronously and can be canceled', () => {
+  const apiSource = readSource('src/api/mysqlWorkbench.js')
+  const composableSource = readSource('src/composables/useMysqlWorkbench.js')
+  const queryTabSource = readSource('src/components/mysql-workbench/SqlQueryTab.vue')
+  const pageSource = readSource('src/pages/MysqlWorkbenchPage.vue')
+
+  assert.match(apiSource, /createMysqlSqlExecution/)
+  assert.match(apiSource, /getMysqlSqlExecution/)
+  assert.match(apiSource, /cancelMysqlSqlExecution/)
+  assert.match(composableSource, /createMysqlSqlExecution/)
+  assert.match(composableSource, /pollMysqlSqlExecution/)
+  assert.match(composableSource, /cancelQueryTab/)
+  assert.match(queryTabSource, /cancel-execution/)
+  assert.match(queryTabSource, />停止</)
+  assert.match(pageSource, /@cancel-execution="cancelQueryTab\(activeTab\.key\)"/)
 })

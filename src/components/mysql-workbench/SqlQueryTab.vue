@@ -1,9 +1,9 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import SqlEditor from './SqlEditor.vue'
 import VirtualResultTable from './VirtualResultTable.vue'
-import { getMysqlTableMetadata } from '@/api/mysqlWorkbench'
+import { useMysqlMetadataCache } from '@/composables/useMysqlMetadataCache'
 import { formatMysqlResultRowCount, resolveMysqlExecutableSql } from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
@@ -21,14 +21,18 @@ const props = defineProps({
   },
 })
 
-// 缓存表的字段信息
-const tableColumnsCache = ref({})
+const {
+  metadataCacheVersion,
+  getMysqlTableColumnsCached,
+  peekMysqlTableColumns,
+} = useMysqlMetadataCache()
 
 const emit = defineEmits([
   'change-sql',
   'change-schema',
   'change-title',
   'execute',
+  'cancel-execution',
   'save',
   'open-history',
   'show-edit-mode',
@@ -41,14 +45,14 @@ const isResultFocusMode = computed(() => props.tab.viewMode === 'result-focus')
 
 // 构建 CodeMirror SQL 自动补全所需的 schema 格式
 const sqlSchema = computed(() => {
+  metadataCacheVersion.value
   const schema = {}
   for (const node of props.treeNodes) {
     if (node.type === 'schema' && node.children?.length) {
       const tables = {}
       for (const child of node.children) {
         if (child.type === 'table') {
-          const cacheKey = `${node.label}.${child.label}`
-          tables[child.label] = tableColumnsCache.value[cacheKey] || []
+          tables[child.label] = peekMysqlTableColumns(node.label, child.label) || []
         }
       }
       if (Object.keys(tables).length > 0) {
@@ -59,49 +63,42 @@ const sqlSchema = computed(() => {
   return schema
 })
 
-// 获取表的字段信息并缓存
 async function loadTableColumns(schema, table) {
-  const cacheKey = `${schema}.${table}`
-  if (tableColumnsCache.value[cacheKey]) return
-
   try {
-    const metadata = await getMysqlTableMetadata(schema, table)
-    const columns = (metadata?.columns || []).map(col => col.name)
-    tableColumnsCache.value = {
-      ...tableColumnsCache.value,
-      [cacheKey]: columns,
-    }
+    return await getMysqlTableColumnsCached(schema, table)
   } catch {
-    // 静默失败
+    return []
   }
 }
-
-// 监听 treeNodes 变化，加载字段
-watch(() => props.treeNodes, async (nodes) => {
-  if (!nodes?.length) return
-
-  for (const node of nodes) {
-    if (node.type === 'schema' && node.children?.length) {
-      for (const child of node.children) {
-        if (child.type === 'table') {
-          const cacheKey = `${node.label}.${child.label}`
-          if (!tableColumnsCache.value[cacheKey]) {
-            await loadTableColumns(node.label, child.label)
-          }
-        }
-      }
-    }
-  }
-}, { immediate: true, deep: true })
 const shouldShowSqlPreview = computed(() => isResultFocusMode.value && props.tab.sqlPreviewExpanded)
 const sqlPreviewToggleText = computed(() => (shouldShowSqlPreview.value ? '收起 SQL' : '展开 SQL'))
 const editorRef = ref(null)
+const queryPanelRef = ref(null)
 const selectedSql = ref('')
+const editorHeight = ref(320)
+const isResizingEditor = ref(false)
 const hasSelectedSql = computed(() => Boolean(selectedSql.value.trim()))
 const executeButtonText = computed(() => (hasSelectedSql.value ? '执行选中 SQL' : '执行 SQL'))
 const sqlPreviewText = computed(() => props.tab.lastExecutedSql || props.tab.sql || '')
+const canCancelExecution = computed(() => Boolean(props.tab.executing && props.tab.executionId))
+const editorHeightStyle = computed(() => ({
+  '--mysql-query-editor-height': `${editorHeight.value}px`,
+}))
+
+const DEFAULT_EDITOR_HEIGHT = 320
+const MIN_EDITOR_HEIGHT = 180
+const MIN_RESULTS_HEIGHT = 220
+const EDITOR_RESIZE_STEP = 24
+
+let editorResizeCleanup = null
 
 const summaryText = computed(() => {
+  if (props.tab.executing) {
+    return props.tab.canceling ? '正在停止 SQL 执行' : 'SQL 执行中'
+  }
+  if (props.tab.executionStatus === 'CANCELED') {
+    return 'SQL 执行已停止'
+  }
   if (!props.tab.results?.length) {
     return '当前还没有执行结果'
   }
@@ -113,6 +110,12 @@ const summaryText = computed(() => {
 })
 
 const summaryBadgeText = computed(() => {
+  if (props.tab.executing) {
+    return props.tab.canceling ? '停止中' : '执行中'
+  }
+  if (props.tab.executionStatus === 'CANCELED') {
+    return '已停止'
+  }
   if (!props.tab.results?.length) {
     return '无结果'
   }
@@ -143,6 +146,68 @@ function handleExportResult(result) {
 
 function flushSql() {
   editorRef.value?.flush?.()
+}
+
+function getMaxEditorHeight() {
+  const panel = queryPanelRef.value
+  const panelHeight = panel?.getBoundingClientRect?.().height || 0
+  if (!panelHeight) {
+    return DEFAULT_EDITOR_HEIGHT
+  }
+  const panelStyle = window.getComputedStyle(panel)
+  const gap = Number.parseFloat(panelStyle.rowGap || panelStyle.gap) || 0
+  const paddingY = (Number.parseFloat(panelStyle.paddingTop) || 0) + (Number.parseFloat(panelStyle.paddingBottom) || 0)
+  const splitterHeight = panel.querySelector?.('.mysql-query-resize')?.getBoundingClientRect?.().height || 0
+  return Math.max(MIN_EDITOR_HEIGHT, Math.floor(panelHeight - MIN_RESULTS_HEIGHT - paddingY - gap * 2 - splitterHeight))
+}
+
+function setEditorHeight(value) {
+  const nextHeight = Math.min(Math.max(Math.round(value), MIN_EDITOR_HEIGHT), getMaxEditorHeight())
+  if (nextHeight === editorHeight.value) {
+    return
+  }
+  editorHeight.value = nextHeight
+  editorRef.value?.refresh?.()
+}
+
+function resetEditorHeight() {
+  setEditorHeight(DEFAULT_EDITOR_HEIGHT)
+}
+
+function cleanupEditorResize() {
+  editorResizeCleanup?.()
+  editorResizeCleanup = null
+  isResizingEditor.value = false
+}
+
+function startEditorResize(event) {
+  if (!isEditMode.value) {
+    return
+  }
+  cleanupEditorResize()
+  const startY = event.clientY
+  const startHeight = editorHeight.value
+  isResizingEditor.value = true
+
+  const handlePointerMove = (moveEvent) => {
+    moveEvent.preventDefault()
+    setEditorHeight(startHeight + moveEvent.clientY - startY)
+  }
+  const handlePointerUp = () => {
+    cleanupEditorResize()
+  }
+
+  window.addEventListener('pointermove', handlePointerMove)
+  window.addEventListener('pointerup', handlePointerUp, { once: true })
+  editorResizeCleanup = () => {
+    window.removeEventListener('pointermove', handlePointerMove)
+    window.removeEventListener('pointerup', handlePointerUp)
+  }
+  event.preventDefault()
+}
+
+function nudgeEditorHeight(delta) {
+  setEditorHeight(editorHeight.value + delta)
 }
 
 function handleSelectionChange(value) {
@@ -176,6 +241,10 @@ function handleSave() {
   emit('save')
 }
 
+onBeforeUnmount(() => {
+  cleanupEditorResize()
+})
+
 defineExpose({ flushSql })
 </script>
 
@@ -203,6 +272,7 @@ defineExpose({ flushSql })
 
           <div class="mysql-query-toolbar__actions">
             <el-button type="primary" :loading="tab.executing" @click="handleExecute">{{ executeButtonText }}</el-button>
+            <el-button v-if="canCancelExecution" type="danger" plain :loading="tab.canceling" @click="$emit('cancel-execution')">停止</el-button>
             <el-button :loading="tab.saveStatus === 'saving'" @click="handleSave">保存</el-button>
             <el-button :disabled="!tab.batchId" @click="$emit('open-history')">查看历史</el-button>
           </div>
@@ -230,22 +300,44 @@ defineExpose({ flushSql })
         <div class="page-toolbar__right mysql-query-toolbar__focus-actions">
           <el-button size="small" @click="$emit('show-edit-mode')">返回编辑</el-button>
           <el-button type="primary" size="small" :loading="tab.executing" @click="handleExecute">再执行</el-button>
+          <el-button v-if="canCancelExecution" type="danger" plain size="small" :loading="tab.canceling" @click="$emit('cancel-execution')">停止</el-button>
           <el-button size="small" @click="$emit('toggle-sql-preview')">{{ sqlPreviewToggleText }}</el-button>
           <el-button size="small" :disabled="!tab.batchId" @click="$emit('open-history')">查看历史</el-button>
         </div>
       </template>
     </section>
 
-    <section class="content-panel compact-main-panel mysql-query-panel" :class="{ 'is-focus': isResultFocusMode }">
-      <div v-if="isEditMode" class="mysql-query-editor">
+    <section
+      ref="queryPanelRef"
+      class="content-panel compact-main-panel mysql-query-panel"
+      :class="{ 'is-focus': isResultFocusMode, 'is-resizing-editor': isResizingEditor }"
+    >
+      <div v-if="isEditMode" class="mysql-query-editor" :style="editorHeightStyle">
         <SqlEditor
           ref="editorRef"
           :model-value="tab.sql"
           :schema="sqlSchema"
+          :default-schema="tab.schema"
+          :load-table-columns="loadTableColumns"
           @update:model-value="$emit('change-sql', $event)"
           @selection-change="handleSelectionChange"
         />
       </div>
+
+      <button
+        v-if="isEditMode"
+        type="button"
+        class="mysql-query-resize"
+        aria-label="拖动调整 SQL 编辑区高度，双击恢复默认高度"
+        @pointerdown="startEditorResize"
+        @dblclick="resetEditorHeight"
+        @keydown.up.prevent="nudgeEditorHeight(-EDITOR_RESIZE_STEP)"
+        @keydown.down.prevent="nudgeEditorHeight(EDITOR_RESIZE_STEP)"
+        @keydown.home.prevent="setEditorHeight(MIN_EDITOR_HEIGHT)"
+        @keydown.end.prevent="setEditorHeight(getMaxEditorHeight())"
+      >
+        <span class="mysql-query-resize__grip" />
+      </button>
 
       <div v-else-if="shouldShowSqlPreview" class="mysql-query-focus-preview">
         <pre>{{ sqlPreviewText }}</pre>
@@ -385,7 +477,7 @@ defineExpose({ flushSql })
 
 .mysql-query-panel {
   flex: 1;
-  gap: 14px;
+  gap: 10px;
 }
 
 .mysql-query-panel.is-focus {
@@ -393,7 +485,44 @@ defineExpose({ flushSql })
 }
 
 .mysql-query-editor {
-  min-height: 320px;
+  flex: 0 0 auto;
+  min-height: 180px;
+  height: var(--mysql-query-editor-height);
+}
+
+.mysql-query-resize {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 12px;
+  width: 100%;
+  min-height: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.mysql-query-resize__grip {
+  width: 72px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(30, 42, 51, 0.2);
+  transition: width 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.mysql-query-resize:hover .mysql-query-resize__grip,
+.mysql-query-resize:focus-visible .mysql-query-resize__grip,
+.mysql-query-panel.is-resizing-editor .mysql-query-resize__grip {
+  width: 96px;
+  background: rgba(195, 95, 55, 0.62);
+  box-shadow: 0 0 0 4px rgba(195, 95, 55, 0.12);
+}
+
+.mysql-query-resize:focus-visible {
+  outline: 0;
 }
 
 .mysql-query-results {

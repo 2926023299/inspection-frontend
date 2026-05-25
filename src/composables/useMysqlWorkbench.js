@@ -1,8 +1,10 @@
 import { computed, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
+  cancelMysqlSqlExecution,
+  createMysqlSqlExecution,
   deleteMysqlSavedQuery,
-  executeMysqlSqlBatch,
+  getMysqlSqlExecution,
   listMysqlSchemas,
   listMysqlSchemaTables,
   listMysqlSavedQueries,
@@ -23,6 +25,9 @@ import {
   setMysqlQueryResultFocusMode,
   upsertMysqlSchemaTables,
 } from '@/utils/mysqlWorkbench'
+
+const SQL_EXECUTION_POLL_INTERVAL_MS = 1000
+const TERMINAL_SQL_EXECUTION_STATUSES = new Set(['SUCCESS', 'FAILED', 'CANCELED'])
 
 function findFirstTableNode(nodes = []) {
   for (const node of nodes) {
@@ -264,6 +269,10 @@ export function useMysqlWorkbench() {
       sql: initial.sql || initial.sqlText || '',
       results: [],
       executing: false,
+      canceling: false,
+      executionId: null,
+      executionStatus: '',
+      executionMessage: '',
       batchId: null,
       dangerous: false,
       lastExecutedSql: '',
@@ -456,6 +465,87 @@ export function useMysqlWorkbench() {
     })
   }
 
+  function delay(ms) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms)
+    })
+  }
+
+  function isQueryTabOpen(tab) {
+    return Boolean(tab && tabs.value.some((item) => item.key === tab.key))
+  }
+
+  function isTerminalSqlExecutionStatus(status) {
+    return TERMINAL_SQL_EXECUTION_STATUSES.has(status)
+  }
+
+  function applySqlExecutionView(tab, execution, executableSql, usedSelection) {
+    if (!tab || !execution) {
+      return false
+    }
+    tab.executionId = execution.id || tab.executionId
+    tab.executionStatus = execution.status || tab.executionStatus || ''
+    tab.executionMessage = execution.message || tab.executionMessage || ''
+    const result = execution.result
+    if (result) {
+      tab.results = result.results || []
+      tab.batchId = result.batchId || null
+      tab.dangerous = Boolean(result.dangerous)
+      tab.executionStatus = result.status || (result.success === false ? 'FAILED' : 'SUCCESS')
+      tab.executionMessage = result.message || execution.message || ''
+      tab.lastExecutedSql = executableSql
+      tab.lastExecutionUsedSelection = usedSelection
+    }
+    return isTerminalSqlExecutionStatus(tab.executionStatus)
+  }
+
+  function notifySqlExecutionTerminal(tab, execution) {
+    if (tab.executionStatus === 'CANCELED') {
+      ElMessage.warning('SQL 执行已停止')
+    } else if (tab.executionStatus === 'FAILED') {
+      const result = execution?.result
+      ElMessage.error(result?.message || execution?.message || `第 ${result?.failedStatementIndex || '?'} 条 SQL 执行失败`)
+    } else {
+      ElMessage.success('SQL 执行完成')
+    }
+  }
+
+  async function pollMysqlSqlExecution(tab, executionId, executableSql, usedSelection) {
+    while (isQueryTabOpen(tab) && tab.executionId === executionId) {
+      const execution = await getMysqlSqlExecution(executionId)
+      const finished = applySqlExecutionView(tab, execution, executableSql, usedSelection)
+      if (finished) {
+        tab.executing = false
+        tab.canceling = false
+        notifySqlExecutionTerminal(tab, execution)
+        return
+      }
+      await delay(SQL_EXECUTION_POLL_INTERVAL_MS)
+    }
+  }
+
+  async function cancelQueryTab(key) {
+    const tab = tabs.value.find((item) => item.key === key)
+    if (!tab || tab.type !== 'query' || !tab.executing || !tab.executionId || tab.canceling) {
+      return
+    }
+    tab.canceling = true
+    tab.executionStatus = 'CANCELING'
+    tab.executionMessage = '正在停止 SQL 执行'
+    try {
+      const execution = await cancelMysqlSqlExecution(tab.executionId)
+      const finished = applySqlExecutionView(tab, execution, tab.lastExecutedSql || tab.sql || '', Boolean(tab.lastExecutionUsedSelection))
+      if (finished) {
+        tab.executing = false
+        tab.canceling = false
+        notifySqlExecutionTerminal(tab, execution)
+      }
+    } catch (requestError) {
+      tab.canceling = false
+      ElMessage.error(requestError.message || '停止 SQL 执行失败')
+    }
+  }
+
   async function executeQueryTab(key, { forceConfirmed = false, sqlOverride = null, usedSelection = false } = {}) {
     const tab = tabs.value.find((item) => item.key === key)
     if (!tab || tab.executing) {
@@ -490,31 +580,38 @@ export function useMysqlWorkbench() {
     }
 
     tab.executing = true
+    tab.canceling = false
+    tab.executionId = null
+    tab.executionStatus = 'RUNNING'
+    tab.executionMessage = 'SQL 执行中'
     try {
       await saveQueryTab(tab)
-      const result = await executeMysqlSqlBatch({
+      const execution = await createMysqlSqlExecution({
         schema: tab.schema || '',
         sql: executableSql,
         confirmed: forceConfirmed,
       })
-      tab.results = result.results || []
-      tab.batchId = result.batchId || null
-      tab.dangerous = Boolean(result.dangerous)
-      tab.executionStatus = result.status || (result.success === false ? 'FAILED' : 'SUCCESS')
-      tab.executionMessage = result.message || ''
+      tab.executionId = execution.id
+      tab.executionStatus = execution.status || 'RUNNING'
+      tab.executionMessage = execution.message || 'SQL 执行中'
       tab.lastExecutedSql = executableSql
       tab.lastExecutionUsedSelection = resolvedSql.hasSelection
       setMysqlQueryResultFocusMode(tab)
-      if (result.success === false) {
-        ElMessage.error(result.message || `第 ${result.failedStatementIndex || '?'} 条 SQL 执行失败`)
-      } else {
-        ElMessage.success('SQL 执行完成')
+      if (applySqlExecutionView(tab, execution, executableSql, resolvedSql.hasSelection)) {
+        tab.executing = false
+        tab.canceling = false
+        notifySqlExecutionTerminal(tab, execution)
+        return
       }
+      await pollMysqlSqlExecution(tab, execution.id, executableSql, resolvedSql.hasSelection)
     } catch (requestError) {
       ElMessage.error(requestError.message || 'SQL 执行失败')
       throw requestError
     } finally {
-      tab.executing = false
+      if (!isTerminalSqlExecutionStatus(tab.executionStatus)) {
+        tab.executing = false
+        tab.canceling = false
+      }
     }
   }
 
@@ -551,5 +648,6 @@ export function useMysqlWorkbench() {
     markTableTabsStale,
     updateTablePreview,
     executeQueryTab,
+    cancelQueryTab,
   }
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getApiBaseLabel } from '@/api/http'
 import TabView from '@/components/TabView.vue'
@@ -8,6 +8,7 @@ const route = useRoute()
 const router = useRouter()
 const sidebarCollapsed = ref(false)
 const backendLabel = computed(() => getApiBaseLabel())
+const fixedViewport = computed(() => Boolean(route.meta.fixedViewport))
 
 const menuItems = [
   { path: '/dashboard', title: '巡检工作台', caption: '总览与入口' },
@@ -39,6 +40,22 @@ watch(sidebarCollapsed, (collapsed) => {
   window.localStorage.setItem('layout-sidebar-collapsed', String(collapsed))
 })
 
+watch(fixedViewport, (enabled) => {
+  setFixedViewportDocumentClass(enabled)
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  setFixedViewportDocumentClass(false)
+})
+
+function setFixedViewportDocumentClass(enabled) {
+  if (typeof document === 'undefined') {
+    return
+  }
+  document.documentElement.classList.toggle('is-fixed-viewport-route', enabled)
+  document.body.classList.toggle('is-fixed-viewport-route', enabled)
+}
+
 function navigate(path) {
   if (path !== route.path) {
     router.push(path)
@@ -51,7 +68,7 @@ function toggleSidebar() {
 </script>
 
 <template>
-  <div class="layout-shell" :class="{ 'is-sidebar-collapsed': sidebarCollapsed }">
+  <div class="layout-shell" :class="{ 'is-sidebar-collapsed': sidebarCollapsed, 'is-fixed-viewport': fixedViewport }">
     <aside class="layout-sidebar glass-panel" :class="{ 'is-collapsed': sidebarCollapsed }">
       <div class="brand-block">
         <div class="brand-row">
@@ -129,6 +146,12 @@ function toggleSidebar() {
 
 .layout-shell.is-sidebar-collapsed {
   grid-template-columns: 88px minmax(0, 1fr);
+}
+
+.layout-shell.is-fixed-viewport {
+  position: fixed;
+  inset: 0;
+  width: 100%;
 }
 
 .layout-sidebar {
@@ -362,6 +385,16 @@ function toggleSidebar() {
     grid-template-columns: 1fr;
     height: auto;
     overflow: visible;
+  }
+
+  .layout-shell.is-fixed-viewport {
+    grid-template-columns: 284px minmax(0, 1fr);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .layout-shell.is-fixed-viewport.is-sidebar-collapsed {
+    grid-template-columns: 88px minmax(0, 1fr);
   }
 
   .layout-sidebar {

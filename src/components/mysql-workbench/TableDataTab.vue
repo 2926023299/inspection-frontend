@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { createMysqlExportJob, deleteMysqlTableRow, getMysqlTableMetadata, insertMysqlTableRow, queryMysqlTableData, updateMysqlTableRow } from '@/api/mysqlWorkbench'
+import { createMysqlExportJob, deleteMysqlTableRow, insertMysqlTableRow, queryMysqlTableData, updateMysqlTableRow } from '@/api/mysqlWorkbench'
+import { useMysqlMetadataCache } from '@/composables/useMysqlMetadataCache'
 import { buildMysqlTableExportRequest, buildRowKeyValues, createMysqlTableDataState, formatMysqlCell, patchMysqlTableDataState } from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
@@ -37,6 +38,7 @@ const dialogVisible = ref(false)
 const dialogMode = ref('insert')
 const editingRow = ref(null)
 const formModel = ref({})
+const { getMysqlTableMetadataCached } = useMysqlMetadataCache()
 
 const columns = computed(() => metadata.value?.columns || [])
 const keyColumns = computed(() => metadata.value?.keyColumns || [])
@@ -90,9 +92,9 @@ watch(
   { immediate: true },
 )
 
-async function loadMetadata() {
+async function loadMetadata(options = {}) {
   try {
-    metadata.value = await getMysqlTableMetadata(props.schema, props.table)
+    metadata.value = await getMysqlTableMetadataCached(props.schema, props.table, options)
     const nextColumns = metadata.value?.columns || []
     if (!nextColumns.some((column) => column.name === filterColumn.value)) {
       updateTableState({ filterColumn: nextColumns[0]?.name || '' })

@@ -1,5 +1,7 @@
 import http, { buildRequestUrl } from './http'
 
+export const MYSQL_WORKBENCH_SQL_EXECUTE_TIMEOUT_MS = 600000
+
 export function listMysqlWorkbenchTree(includeSystemSchemas = false) {
   return http.get('/mysql-workbench/tree', {
     params: { includeSystemSchemas },
@@ -21,6 +23,12 @@ export function listMysqlSchemaTables(schema, params = {}) {
 export function getMysqlTableMetadata(schema, table) {
   return http.get('/mysql-workbench/table/metadata', {
     params: { schema, table },
+  })
+}
+
+export function listMysqlTableColumns(schema, tables = []) {
+  return http.get(`/mysql-workbench/schemas/${encodeURIComponent(schema)}/columns`, {
+    params: { tables: [...new Set(tables)].filter(Boolean).join(',') },
   })
 }
 
@@ -57,7 +65,23 @@ export function executeMysqlTableDesign(payload) {
 }
 
 export function executeMysqlSqlBatch(payload) {
-  return http.post('/mysql-workbench/sql/execute', payload)
+  return http.post('/mysql-workbench/sql/execute', payload, {
+    timeout: MYSQL_WORKBENCH_SQL_EXECUTE_TIMEOUT_MS,
+  })
+}
+
+export function createMysqlSqlExecution(payload) {
+  return http.post('/mysql-workbench/sql/executions', payload, {
+    timeout: MYSQL_WORKBENCH_SQL_EXECUTE_TIMEOUT_MS,
+  })
+}
+
+export function getMysqlSqlExecution(executionId) {
+  return http.get(`/mysql-workbench/sql/executions/${encodeURIComponent(executionId)}`)
+}
+
+export function cancelMysqlSqlExecution(executionId) {
+  return http.post(`/mysql-workbench/sql/executions/${encodeURIComponent(executionId)}/cancel`)
 }
 
 export function listMysqlQueryHistory(params = {}) {

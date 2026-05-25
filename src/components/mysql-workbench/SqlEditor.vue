@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Compartment, EditorState, Facet } from '@codemirror/state'
 import { EditorView, basicSetup } from 'codemirror'
-import { MySQL, sql } from '@codemirror/lang-sql'
+import { MySQL, keywordCompletionSource, schemaCompletionSource, sql } from '@codemirror/lang-sql'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { autocompletion } from '@codemirror/autocomplete'
 import { tooltips } from '@codemirror/view'
@@ -17,6 +17,14 @@ const props = defineProps({
   schema: {
     type: Object,
     default: () => ({}),
+  },
+  defaultSchema: {
+    type: String,
+    default: '',
+  },
+  loadTableColumns: {
+    type: Function,
+    default: null,
   },
 })
 
@@ -33,7 +41,6 @@ const sync = createDebouncedSqlSync(props.modelValue, (value) => {
 
 const mysqlEditorTheme = EditorView.theme({
   '&': {
-    minHeight: '320px',
     height: '100%',
     borderRadius: '18px',
     backgroundColor: '#101a29',
@@ -46,7 +53,7 @@ const mysqlEditorTheme = EditorView.theme({
     lineHeight: '1.65',
   },
   '.cm-content': {
-    minHeight: '320px',
+    minHeight: '100%',
     padding: '16px',
   },
   '.cm-gutters': {
@@ -106,102 +113,157 @@ const schemaFacet = Facet.define({
   combine: (values) => values[0] || {},
 })
 
+const aliasStopWords = ['ON', 'WHERE', 'SET', 'GROUP', 'ORDER', 'LIMIT', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'JOIN']
+
+function normalizeSqlIdentifier(identifier) {
+  return String(identifier || '').replace(/^`|`$/g, '')
+}
+
+function hasTable(schema, schemaName, tableName) {
+  return Boolean(schema?.[schemaName] && Object.prototype.hasOwnProperty.call(schema[schemaName], tableName))
+}
+
+function resolveTableTarget(schema, schemaName, tableName, defaultSchema) {
+  const normalizedSchema = normalizeSqlIdentifier(schemaName)
+  const normalizedTable = normalizeSqlIdentifier(tableName)
+  const preferredSchema = normalizedSchema || normalizeSqlIdentifier(defaultSchema)
+
+  if (preferredSchema) {
+    return { schema: preferredSchema, table: normalizedTable }
+  }
+
+  for (const candidateSchema of Object.keys(schema || {})) {
+    if (hasTable(schema, candidateSchema, normalizedTable)) {
+      return { schema: candidateSchema, table: normalizedTable }
+    }
+  }
+  return null
+}
+
 // 解析 SQL 中的别名映射
-function parseAliases(sqlText, schema) {
+function parseAliases(sqlText, schema, defaultSchema) {
   const aliases = {}
   // 匹配 FROM/JOIN 后面的表名和别名
-  const regex = /(?:FROM|JOIN)\s+(?:(\w+)\.)?(\w+)(?:\s+(?:AS\s+)?(\w+))?/gi
+  const regex = /(?:FROM|JOIN)\s+(?:(`[^`]+`|\w+)\.)?(`[^`]+`|\w+)(?:\s+(?:AS\s+)?(`[^`]+`|\w+))?/gi
   let match
 
   while ((match = regex.exec(sqlText)) !== null) {
-    const schemaName = match[1]
-    const tableName = match[2]
-    const alias = match[3]
-
-    if (alias && !['ON', 'WHERE', 'SET', 'GROUP', 'ORDER', 'LIMIT', 'LEFT', 'RIGHT', 'INNER', 'OUTER'].includes(alias.toUpperCase())) {
-      let columns = []
-      if (schemaName && schema[schemaName]?.[tableName]) {
-        columns = schema[schemaName][tableName]
-      } else {
-        for (const s of Object.values(schema)) {
-          if (s[tableName]) {
-            columns = s[tableName]
-            break
-          }
-        }
-      }
-      if (columns.length > 0) {
-        aliases[alias] = columns
-      }
+    const alias = normalizeSqlIdentifier(match[3])
+    if (!alias || aliasStopWords.includes(alias.toUpperCase())) {
+      continue
+    }
+    const target = resolveTableTarget(schema, match[1], match[2], defaultSchema)
+    if (target) {
+      aliases[alias] = target
     }
   }
 
   return aliases
 }
 
+function findTableTarget(schema, tableName, defaultSchema) {
+  const normalizedTable = normalizeSqlIdentifier(tableName)
+  const normalizedDefaultSchema = normalizeSqlIdentifier(defaultSchema)
+
+  if (schema?.[normalizedTable]) {
+    return null
+  }
+  if (normalizedDefaultSchema) {
+    return { schema: normalizedDefaultSchema, table: normalizedTable }
+  }
+  for (const schemaName of Object.keys(schema || {})) {
+    if (hasTable(schema, schemaName, normalizedTable)) {
+      return { schema: schemaName, table: normalizedTable }
+    }
+  }
+  return null
+}
+
+function columnsToCompletionResult(columns, from) {
+  if (!columns?.length) {
+    return null
+  }
+  return {
+    from,
+    options: columns.map(col => ({
+      label: col,
+      type: 'property',
+    })),
+  }
+}
+
+async function loadColumnsForTarget(schema, target) {
+  if (!target?.schema || !target?.table) {
+    return []
+  }
+  const cachedColumns = schema?.[target.schema]?.[target.table]
+  if (Array.isArray(cachedColumns) && cachedColumns.length > 0) {
+    return cachedColumns
+  }
+  if (typeof props.loadTableColumns !== 'function') {
+    return []
+  }
+  return props.loadTableColumns(target.schema, target.table)
+}
+
 // 表名和别名补全源
-function tableAndAliasCompletionSource(context) {
-  const word = context.matchBefore(/\w+\./)
+async function tableAndAliasCompletionSource(context) {
+  const word = context.matchBefore(/(?:`[^`]+`|\w+)\./)
   if (!word) return null
 
   const text = context.state.doc.toString()
-  const prefix = word.text.slice(0, -1)
+  const prefix = normalizeSqlIdentifier(word.text.slice(0, -1))
 
   // 获取 schema（从编辑器状态中获取）
   const schema = context.state.facet(schemaFacet)
   if (!schema) return null
 
   // 1. 先检查别名
-  const aliases = parseAliases(text, schema)
-  const aliasColumns = aliases[prefix]
-  if (aliasColumns?.length > 0) {
-    return {
-      from: word.from + prefix.length + 1,
-      options: aliasColumns.map(col => ({
-        label: col,
-        type: 'property',
-      })),
-    }
+  const defaultSchema = props.defaultSchema
+  const aliases = parseAliases(text, schema, defaultSchema)
+  const target = aliases[prefix] || findTableTarget(schema, prefix, defaultSchema)
+  if (!target) {
+    return null
   }
 
-  // 2. 检查表名（遍历所有 schema）
-  // schema 是 Vue Proxy，直接访问属性
-  const schemaNames = ['ies_ls', 'ies_ms', 'ies_xs'] // 常见 schema 名
-  for (const schemaName of schemaNames) {
-    const tables = schema[schemaName]
-    if (tables && tables[prefix]) {
-      const columns = tables[prefix]
-      if (Array.isArray(columns) && columns.length > 0) {
-        return {
-          from: word.from + prefix.length + 1,
-          options: columns.map(col => ({
-            label: col,
-            type: 'property',
-          })),
-        }
-      }
-    }
-  }
+  const columns = await loadColumnsForTarget(schema, target)
+  return columnsToCompletionResult(columns, word.from + word.text.length)
+}
 
-  return null
+function schemaAndTableCompletionSource(config) {
+  const source = schemaCompletionSource(config)
+  return (context) => {
+    if (context.matchBefore(/(?:`[^`]+`|\w+)\./)) {
+      return null
+    }
+    return source(context)
+  }
 }
 
 // 创建 SQL 语言扩展（包含自定义补全）
-function createSqlExtension(schema = {}) {
+function createSqlExtension(schema = {}, defaultSchemaValue = '') {
   const schemaNames = Object.keys(schema)
-  const defaultSchema = schemaNames[0] || undefined
-
-  // 获取 SQL 扩展的默认补全源
-  const sqlLang = sql({
+  const defaultSchema = defaultSchemaValue || schemaNames[0] || undefined
+  const sqlConfig = {
     dialect: MySQL,
     schema: schema,
     defaultSchema: defaultSchema,
     upperCaseKeywords: true,
-  })
+  }
+
+  // 获取 SQL 扩展的默认补全源
+  const sqlLang = sql(sqlConfig)
 
   return [
     sqlLang,
     schemaFacet.of(schema),
+    autocompletion({
+      override: [
+        tableAndAliasCompletionSource,
+        schemaAndTableCompletionSource(sqlConfig),
+        keywordCompletionSource(MySQL, true),
+      ],
+    }),
   ]
 }
 
@@ -255,7 +317,7 @@ function updateSelectedSql() {
 }
 
 onMounted(() => {
-  const sqlExts = createSqlExtension(props.schema)
+  const sqlExts = createSqlExtension(props.schema, props.defaultSchema)
   const tooltipParent = editorHost.value?.ownerDocument?.body || document.body
   editorView = new EditorView({
     parent: editorHost.value,
@@ -264,9 +326,6 @@ onMounted(() => {
       extensions: [
         basicSetup,
         sqlExtensionCompartment.of(sqlExts),
-        autocompletion({
-          add: [tableAndAliasCompletionSource],
-        }),
         tooltips({ parent: tooltipParent, position: 'fixed' }),
         EditorView.lineWrapping,
         mysqlEditorTheme,
@@ -309,13 +368,13 @@ watch(
 )
 
 watch(
-  () => props.schema,
-  (schema) => {
+  () => [props.schema, props.defaultSchema],
+  ([schema, defaultSchema]) => {
     if (!editorView) {
       return
     }
     editorView.dispatch({
-      effects: sqlExtensionCompartment.reconfigure(createSqlExtension(schema)),
+      effects: sqlExtensionCompartment.reconfigure(createSqlExtension(schema, defaultSchema)),
     })
   },
 )
@@ -329,6 +388,10 @@ function getSelectedSql() {
   return selectedSql
 }
 
+function refresh() {
+  editorView?.requestMeasure?.()
+}
+
 onBeforeUnmount(() => {
   flush()
   sync.dispose()
@@ -336,7 +399,7 @@ onBeforeUnmount(() => {
   editorView = null
 })
 
-defineExpose({ flush, getSelectedSql })
+defineExpose({ flush, getSelectedSql, refresh })
 </script>
 
 <template>
@@ -345,7 +408,7 @@ defineExpose({ flush, getSelectedSql })
 
 <style scoped>
 .mysql-sql-editor {
-  min-height: 320px;
+  min-height: 100%;
   height: 100%;
 }
 </style>

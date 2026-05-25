@@ -88,6 +88,7 @@ const routes = [
           title: 'MySQL工作台',
           tabTitle: 'MySQL工作台',
           menuKey: '/mysql',
+          fixedViewport: true,
           breadcrumb: ['MySQL工作台'],
         },
       },

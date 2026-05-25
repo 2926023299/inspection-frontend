@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { executeMysqlTableDesign, getMysqlTableMetadata, previewMysqlTableDesign } from '@/api/mysqlWorkbench'
+import { executeMysqlTableDesign, previewMysqlTableDesign } from '@/api/mysqlWorkbench'
+import { useMysqlMetadataCache } from '@/composables/useMysqlMetadataCache'
 import { buildMysqlDesignRequest, createDesignDraftFromMetadata, createEmptyDesignColumn, createEmptyDesignIndex } from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
@@ -37,6 +38,10 @@ const draft = ref({
   indexes: [],
 })
 const previewSql = ref([])
+const {
+  getMysqlTableMetadataCached,
+  invalidateMysqlTableMetadata,
+} = useMysqlMetadataCache()
 
 const columnOptions = computed(() => draft.value.columns.map((column) => column.name).filter(Boolean))
 
@@ -56,11 +61,11 @@ watch(
   { immediate: true },
 )
 
-async function loadMetadata() {
+async function loadMetadata(options = {}) {
   loading.value = true
   error.value = ''
   try {
-    metadata.value = await getMysqlTableMetadata(props.schema, props.table)
+    metadata.value = await getMysqlTableMetadataCached(props.schema, props.table, options)
     draft.value = createDesignDraftFromMetadata(metadata.value)
   } catch (requestError) {
     error.value = requestError.message || '加载表设计失败'
@@ -136,8 +141,9 @@ async function executeChanges() {
       confirmed: true,
     })
     ElMessage.success('表结构变更已执行')
+    invalidateMysqlTableMetadata(props.schema, props.table)
     emit('design-executed', { schema: props.schema, table: props.table })
-    await loadMetadata()
+    await loadMetadata({ force: true })
   } catch (requestError) {
     if (requestError !== 'cancel') {
       ElMessage.error(requestError.message || '执行结构变更失败')
