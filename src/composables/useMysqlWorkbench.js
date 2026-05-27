@@ -20,6 +20,7 @@ import {
   getMysqlQueryTabTreeKey,
   getMysqlTableTabKey,
   getMysqlTableTabTitle,
+  loadMysqlSchemaTablePages,
   patchMysqlTableDataState,
   setMysqlQueryEditMode,
   setMysqlQueryResultFocusMode,
@@ -134,13 +135,15 @@ export function useMysqlWorkbench() {
     }
   }
 
-  async function loadSchemaTables(schema, { page = 1, pageSize = 100, keyword = '' } = {}) {
+  async function loadSchemaTables(schema, { page = 1, pageSize = 100, keyword = '', loadAll = true } = {}) {
     if (!schema) return null
     treeNodes.value = treeNodes.value.map((node) => (
       node.type === 'schema' && node.label === schema ? { ...node, loading: true } : node
     ))
     try {
-      const result = await listMysqlSchemaTables(schema, { page, pageSize, keyword })
+      const result = loadAll
+        ? await loadMysqlSchemaTablePages(schema, listMysqlSchemaTables, { page, pageSize, keyword })
+        : await listMysqlSchemaTables(schema, { page, pageSize, keyword })
       treeNodes.value = upsertMysqlSchemaTables(treeNodes.value, schema, result.items || [], {
         page: result.page || page,
         hasNext: result.hasNext,
@@ -322,8 +325,11 @@ export function useMysqlWorkbench() {
 
     if (node.type === 'schema') {
       const current = treeNodes.value.find((item) => item.key === node.key)
-      if (current && !current.loaded && !current.loading) {
-        loadSchemaTables(current.label)
+      if (current && (!current.loaded || current.hasMoreTables) && !current.loading) {
+        loadSchemaTables(current.label, {
+          page: current.loaded ? (current.tablePage || 1) + 1 : 1,
+          keyword: current.tableKeyword || '',
+        })
       }
       return
     }

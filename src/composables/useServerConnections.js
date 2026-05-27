@@ -12,16 +12,15 @@ import {
   SERVER_CONNECTION_SESSIONS_STORAGE_KEY,
 } from '@/utils/serverConnectionSessions'
 
-const loading = ref(false)
-const connecting = ref(false)
-const error = ref('')
-const servers = ref([])
-const searchKeyword = ref('')
-const sessions = ref([])
-const activeSessionId = ref('')
-let restoredPersistedSessions = false
-
 export function useServerConnections() {
+  const loading = ref(false)
+  const connecting = ref(false)
+  const error = ref('')
+  const servers = ref([])
+  const searchKeyword = ref('')
+  const sessions = ref([])
+  const activeSessionId = ref('')
+  let restoredPersistedSessions = false
   const filteredServers = computed(() => {
     const keyword = searchKeyword.value.trim().toLowerCase()
     if (!keyword) {

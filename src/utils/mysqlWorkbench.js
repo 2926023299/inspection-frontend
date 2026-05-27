@@ -54,6 +54,36 @@ export function buildMysqlTableNode(schema, table) {
   }
 }
 
+export async function loadMysqlSchemaTablePages(schema, loadPage, options = {}) {
+  if (!schema || typeof loadPage !== 'function') {
+    return {
+      items: [],
+      page: options.page || 1,
+      hasNext: false,
+      keyword: options.keyword || '',
+    }
+  }
+
+  const pageSize = options.pageSize || 100
+  const keyword = options.keyword || ''
+  const items = []
+  let page = options.page || 1
+  let result = null
+
+  do {
+    result = await loadPage(schema, { page, pageSize, keyword })
+    items.push(...(result?.items || []))
+    page = (result?.page || page) + 1
+  } while (result?.hasNext)
+
+  return {
+    items,
+    page: result?.page || options.page || 1,
+    hasNext: false,
+    keyword: result?.keyword ?? keyword,
+  }
+}
+
 export function upsertMysqlSchemaTables(nodes, schema, tables = [], options = {}) {
   const page = options.page || 1
   const keyword = options.keyword || ''
@@ -270,12 +300,28 @@ export function formatMysqlResultRowCount(result = {}) {
   return `${baseText}，已截断到 ${displayLimit}`
 }
 
+export function formatMysqlDesignExecutionError(result = {}) {
+  const failed = (result.results || []).find((item) => item && item.success === false)
+  if (!failed) {
+    return result.message || ''
+  }
+
+  const parts = []
+  const title = failed.error?.title || failed.message || result.message || '执行失败'
+  parts.push(`语句 ${failed.index || '?'} 执行失败：${title}`)
+  const detail = failed.error?.detail || failed.error?.sqlState || ''
+  if (detail && detail !== title) {
+    parts.push(detail)
+  }
+  return parts.join('；')
+}
+
 export function parseMysqlColumnType(columnType = '') {
   const normalized = String(columnType || '').trim()
-  const match = normalized.match(/^([a-zA-Z0-9_]+)(?:\((\d+)(?:,(\d+))?\))?/i)
+  const match = normalized.match(/^([a-zA-Z0-9_]+)\((\d+)(?:,(\d+))?\)$/i)
   if (!match) {
     return {
-      type: normalized.toUpperCase() || 'VARCHAR',
+      type: normalized || 'VARCHAR',
       length: null,
       scale: null,
     }
@@ -298,6 +344,7 @@ export function createDesignDraftFromMetadata(metadata) {
       scale: parsedType.scale,
       nullable: Boolean(column.nullable),
       defaultValue: column.defaultValue ?? '',
+      defaultValuePresent: column.defaultValue !== null && column.defaultValue !== undefined,
       comment: column.comment ?? '',
       autoIncrement: Boolean(column.autoIncrement),
       primaryKey: Boolean(column.primaryKey),
@@ -328,6 +375,7 @@ export function createEmptyDesignColumn() {
     length: 64,
     scale: null,
     nullable: true,
+    defaultValuePresent: false,
     defaultValue: '',
     comment: '',
     autoIncrement: false,
@@ -357,7 +405,8 @@ export function buildMysqlDesignRequest(schema, table, draft) {
       length: column.length === '' || column.length === null ? null : Number(column.length),
       scale: column.scale === '' || column.scale === null ? null : Number(column.scale),
       nullable: Boolean(column.nullable),
-      defaultValue: column.defaultValue === '' ? null : column.defaultValue,
+      defaultValuePresent: Boolean(column.defaultValuePresent),
+      defaultValue: column.defaultValuePresent ? (column.defaultValue ?? '') : null,
       comment: column.comment || '',
       autoIncrement: Boolean(column.autoIncrement),
       primaryKey: Boolean(column.primaryKey),

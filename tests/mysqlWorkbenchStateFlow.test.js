@@ -37,6 +37,13 @@ test('object tree reapplies local filter when tree nodes change', () => {
   assert.match(treeSource, /treeRef\.value\?\.filter\(filterText\.value\)/)
 })
 
+test('schema selection resumes partial table loads when more pages exist', () => {
+  const composableSource = readSource('src/composables/useMysqlWorkbench.js')
+
+  assert.match(composableSource, /\(!current\.loaded \|\| current\.hasMoreTables\) && !current\.loading/)
+  assert.match(composableSource, /page:\s*current\.loaded\s*\?\s*\(current\.tablePage \|\| 1\) \+ 1\s*:\s*1/)
+})
+
 test('sql editor mounts completion tooltip outside transformed workbench panels', () => {
   const editorSource = readSource('src/components/mysql-workbench/SqlEditor.vue')
 
@@ -71,6 +78,15 @@ test('sql editor asks for table columns only when completing table or alias fiel
   assert.match(editorSource, /context\.matchBefore\(\/\(\?:`\[\^`\]\+`\|\\w\+\)\\\.\/\)/)
   assert.match(editorSource, /override:\s*\[[\s\S]*tableAndAliasCompletionSource[\s\S]*schemaAndTableCompletionSource\(sqlConfig\)/)
   assert.doesNotMatch(editorSource, /add:\s*\[tableAndAliasCompletionSource\]/)
+})
+
+test('table design execution confirms the latest preview and reports backend failures', () => {
+  const designSource = readSource('src/components/mysql-workbench/TableDesignTab.vue')
+
+  assert.match(designSource, /const previewRequestFingerprint = ref\(''\)/)
+  assert.match(designSource, /previewRequestFingerprint\.value !== getDesignRequestFingerprint\(\)/)
+  assert.match(designSource, /formatMysqlDesignExecutionError\(result\)/)
+  assert.doesNotMatch(designSource, /ElMessage\.success\('表结构变更已执行'\)[\s\S]*executeMysqlTableDesign/)
 })
 
 test('sql execution request has a longer timeout than ordinary api calls', () => {

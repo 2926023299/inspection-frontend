@@ -57,8 +57,11 @@ function handleNodeDblclick(node) {
 }
 
 function handleNodeExpand(node) {
-  if (node?.type === 'schema' && !node.loaded && !node.loading) {
-    emit('load-schema-tables', { schema: node.label, page: 1 })
+  if (node?.type === 'schema' && (!node.loaded || node.hasMoreTables) && !node.loading) {
+    emit('load-schema-tables', {
+      schema: node.label,
+      page: node.loaded ? (node.tablePage || 1) + 1 : 1,
+    })
   }
 }
 

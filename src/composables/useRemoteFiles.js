@@ -1,4 +1,4 @@
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   createRemoteDirectory,
@@ -14,6 +14,7 @@ export function useRemoteFiles(activeSession, onCwdChange) {
   const loading = ref(false)
   const uploading = ref(false)
   const error = ref('')
+  let loadAbortController = null
 
   const activeFileState = computed(() => {
     if (!activeSession.value) {
@@ -42,17 +43,27 @@ export function useRemoteFiles(activeSession, onCwdChange) {
       return
     }
 
+    if (loadAbortController) {
+      loadAbortController.abort()
+    }
+    loadAbortController = new AbortController()
+    const { signal } = loadAbortController
+
     loading.value = true
     error.value = ''
     try {
       const fileList = await listRemoteFiles(activeSession.value.sessionId, path || activeSession.value.cwd)
+      if (signal.aborted) return
       fileStates[activeSession.value.sessionId] = fileList
       onCwdChange(activeSession.value.sessionId, fileList.cwd)
     } catch (requestError) {
+      if (signal.aborted) return
       error.value = requestError.message
       ElMessage.error(requestError.message)
     } finally {
-      loading.value = false
+      if (!signal.aborted) {
+        loading.value = false
+      }
     }
   }
 
@@ -125,6 +136,13 @@ export function useRemoteFiles(activeSession, onCwdChange) {
     },
     { immediate: true },
   )
+
+  onBeforeUnmount(() => {
+    if (loadAbortController) {
+      loadAbortController.abort()
+      loadAbortController = null
+    }
+  })
 
   return {
     loading,

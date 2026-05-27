@@ -3,7 +3,13 @@ import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { executeMysqlTableDesign, previewMysqlTableDesign } from '@/api/mysqlWorkbench'
 import { useMysqlMetadataCache } from '@/composables/useMysqlMetadataCache'
-import { buildMysqlDesignRequest, createDesignDraftFromMetadata, createEmptyDesignColumn, createEmptyDesignIndex } from '@/utils/mysqlWorkbench'
+import {
+  buildMysqlDesignRequest,
+  createDesignDraftFromMetadata,
+  createEmptyDesignColumn,
+  createEmptyDesignIndex,
+  formatMysqlDesignExecutionError,
+} from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
   schema: {
@@ -38,6 +44,7 @@ const draft = ref({
   indexes: [],
 })
 const previewSql = ref([])
+const previewRequestFingerprint = ref('')
 const {
   getMysqlTableMetadataCached,
   invalidateMysqlTableMetadata,
@@ -67,6 +74,7 @@ async function loadMetadata(options = {}) {
   try {
     metadata.value = await getMysqlTableMetadataCached(props.schema, props.table, options)
     draft.value = createDesignDraftFromMetadata(metadata.value)
+    previewRequestFingerprint.value = ''
   } catch (requestError) {
     error.value = requestError.message || '加载表设计失败'
   } finally {
@@ -93,13 +101,24 @@ function removeIndex(index) {
 function resetDraft() {
   draft.value = createDesignDraftFromMetadata(metadata.value)
   previewSql.value = []
+  previewRequestFingerprint.value = ''
+}
+
+function buildDesignRequest() {
+  return buildMysqlDesignRequest(props.schema, props.table, draft.value)
+}
+
+function getDesignRequestFingerprint() {
+  return JSON.stringify(buildDesignRequest())
 }
 
 async function previewChanges() {
   actionLoading.value = true
   try {
-    const result = await previewMysqlTableDesign(buildMysqlDesignRequest(props.schema, props.table, draft.value))
+    const request = buildDesignRequest()
+    const result = await previewMysqlTableDesign(request)
     previewSql.value = result.statements || []
+    previewRequestFingerprint.value = JSON.stringify(request)
     emit('preview-generated', {
       schema: props.schema,
       table: props.table,
@@ -107,20 +126,22 @@ async function previewChanges() {
     })
     if (!previewSql.value.length) {
       ElMessage.info('当前没有结构变更')
-      return
+      return false
     }
     ElMessage.success(`已生成 ${previewSql.value.length} 条 SQL 预览`)
+    return true
   } catch (requestError) {
     ElMessage.error(requestError.message || '生成 SQL 预览失败')
+    return false
   } finally {
     actionLoading.value = false
   }
 }
 
 async function executeChanges() {
-  if (!previewSql.value.length) {
-    await previewChanges()
-    if (!previewSql.value.length) {
+  if (!previewSql.value.length || previewRequestFingerprint.value !== getDesignRequestFingerprint()) {
+    const hasPreview = await previewChanges()
+    if (!hasPreview) {
       return
     }
   }
@@ -136,10 +157,14 @@ async function executeChanges() {
       },
     )
     actionLoading.value = true
-    await executeMysqlTableDesign({
-      ...buildMysqlDesignRequest(props.schema, props.table, draft.value),
+    const result = await executeMysqlTableDesign({
+      ...buildDesignRequest(),
       confirmed: true,
     })
+    if (result?.success === false || result?.status === 'FAILED') {
+      ElMessage.error(formatMysqlDesignExecutionError(result) || '执行结构变更失败')
+      return
+    }
     ElMessage.success('表结构变更已执行')
     invalidateMysqlTableMetadata(props.schema, props.table)
     emit('design-executed', { schema: props.schema, table: props.table })
@@ -202,7 +227,8 @@ async function executeChanges() {
             <el-input v-model="column.type" placeholder="类型" />
             <el-input v-model="column.length" placeholder="长度" />
             <el-input v-model="column.scale" placeholder="小数位" />
-            <el-input v-model="column.defaultValue" placeholder="默认值" />
+            <el-checkbox v-model="column.defaultValuePresent">默认</el-checkbox>
+            <el-input v-model="column.defaultValue" placeholder="默认值" @input="column.defaultValuePresent = true" />
             <el-input v-model="column.comment" placeholder="注释" />
             <el-checkbox v-model="column.nullable">可空</el-checkbox>
             <el-checkbox v-model="column.primaryKey">主键</el-checkbox>
@@ -319,10 +345,10 @@ async function executeChanges() {
 
 .mysql-design-row {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr 90px 90px 0.9fr 1fr auto auto auto auto;
+  grid-template-columns: 1.1fr 0.9fr 90px 90px auto 0.9fr 1fr auto auto auto auto;
   gap: 10px;
   align-items: center;
-  min-width: 1080px;
+  min-width: 1140px;
 }
 
 .mysql-design-index-row {

@@ -5,10 +5,14 @@ import {
   buildMysqlSavedQueryNode,
   buildMysqlSchemaNode,
   buildMysqlDumpSql,
+  buildMysqlDesignRequest,
   buildMysqlTableExportRequest,
   createMysqlTableDataState,
   createDebouncedSqlSync,
+  createDesignDraftFromMetadata,
   createMysqlQueryPresentationState,
+  formatMysqlDesignExecutionError,
+  loadMysqlSchemaTablePages,
   resolveMysqlExecutableSql,
   formatMysqlResultRowCount,
   getMysqlQueryTabTreeKey,
@@ -125,6 +129,35 @@ test('schema table updates preserve unrelated tree node references', () => {
     next[0].children.map((node) => node.key),
     ['table:ies_ls.breaker_energy_data', 'table:ies_ls.inspection_table'],
   )
+})
+
+test('schema table page loader fetches every page for completion table names', async () => {
+  const calls = []
+  const result = await loadMysqlSchemaTablePages(
+    'ies_ls',
+    async (schema, params) => {
+      calls.push({ schema, ...params })
+      if (params.page === 1) {
+        return { items: ['breaker_energy_data', 'inspection_table'], page: 1, hasNext: true, keyword: '' }
+      }
+      if (params.page === 2) {
+        return { items: ['station_config'], page: 2, hasNext: false, keyword: '' }
+      }
+      throw new Error(`unexpected page ${params.page}`)
+    },
+    { pageSize: 2 },
+  )
+
+  assert.deepEqual(calls, [
+    { schema: 'ies_ls', page: 1, pageSize: 2, keyword: '' },
+    { schema: 'ies_ls', page: 2, pageSize: 2, keyword: '' },
+  ])
+  assert.deepEqual(result, {
+    items: ['breaker_energy_data', 'inspection_table', 'station_config'],
+    page: 2,
+    hasNext: false,
+    keyword: '',
+  })
 })
 
 test('sql draft sync debounces parent updates and can flush before execute', () => {
@@ -263,4 +296,62 @@ test('table data state preserves filter and paging values when patched', () => {
     pageSize: 100,
   })
   assert.deepEqual(state, createMysqlTableDataState())
+})
+
+test('table design draft preserves complex mysql column types', () => {
+  const draft = createDesignDraftFromMetadata({
+    columns: [
+      { name: 'id', columnType: 'bigint unsigned', nullable: false, defaultValue: null },
+      { name: 'status', columnType: "enum('draft','DONE')", nullable: true, defaultValue: 'draft' },
+    ],
+  })
+
+  assert.equal(draft.columns[0].type, 'bigint unsigned')
+  assert.equal(draft.columns[0].length, null)
+  assert.equal(draft.columns[1].type, "enum('draft','DONE')")
+  assert.equal(draft.columns[1].length, null)
+})
+
+test('table design request distinguishes empty string default from no default', () => {
+  const draft = createDesignDraftFromMetadata({
+    columns: [
+      { name: 'name', columnType: 'varchar(64)', nullable: true, defaultValue: '' },
+      { name: 'remark', columnType: 'varchar(64)', nullable: true, defaultValue: null },
+    ],
+  })
+
+  const request = buildMysqlDesignRequest('ies_ls', 'asset_boundary', draft)
+
+  assert.deepEqual(
+    request.columns.map((column) => ({
+      name: column.name,
+      defaultValuePresent: column.defaultValuePresent,
+      defaultValue: column.defaultValue,
+    })),
+    [
+      { name: 'name', defaultValuePresent: true, defaultValue: '' },
+      { name: 'remark', defaultValuePresent: false, defaultValue: null },
+    ],
+  )
+})
+
+test('table design execution error summarizes failed statement detail', () => {
+  assert.equal(
+    formatMysqlDesignExecutionError({
+      success: false,
+      message: 'SQL 执行失败',
+      results: [
+        {
+          index: 2,
+          success: false,
+          message: 'Duplicate column name',
+          error: {
+            title: '字段已存在',
+            detail: 'Duplicate column name id',
+          },
+        },
+      ],
+    }),
+    '语句 2 执行失败：字段已存在；Duplicate column name id',
+  )
 })
