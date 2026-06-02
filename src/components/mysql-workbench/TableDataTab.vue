@@ -462,8 +462,10 @@ async function handleExport(command) {
 
 .mysql-data-panel {
   flex: 1;
+  min-height: 0;
   gap: 10px;
   padding: 14px;
+  max-height: calc(100vh - 180px);
 }
 
 .mysql-data-panel__header {

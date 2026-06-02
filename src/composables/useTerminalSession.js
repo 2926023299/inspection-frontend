@@ -81,6 +81,12 @@ export function useTerminalSession(sessionRef, activeRef, onStatus, onCwd) {
       if (payload.type === 'status') {
         status.value = payload.status || 'connected'
         onStatus(sessionId, payload.status || 'connected', payload.message || '')
+
+        if (payload.status === 'ssh-closed') {
+          stopHeartbeat()
+        } else if (payload.status === 'connected') {
+          startHeartbeat()
+        }
         return
       }
       if (payload.type === 'cwd') {

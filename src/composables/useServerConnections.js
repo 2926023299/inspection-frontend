@@ -5,6 +5,7 @@ import {
   getServerConnectionCwd,
   listServerConnections,
   openServerConnectionSession,
+  reconnectServerConnectionSession,
 } from '@/api/serverConnections'
 import {
   parseStoredServerConnectionSessions,
@@ -124,6 +125,26 @@ export function useServerConnections() {
     }
   }
 
+  async function reconnectSession(sessionId) {
+    const session = sessions.value.find((item) => item.sessionId === sessionId)
+    if (!session) return
+
+    try {
+      const updated = await reconnectServerConnectionSession(sessionId)
+      session.serverKey = updated.serverKey
+      session.displayName = updated.displayName
+      session.username = updated.username
+      session.cwd = updated.cwd
+      session.status = 'connecting'
+      session.message = '正在重新连接终端'
+      persistSessions()
+      return updated
+    } catch (requestError) {
+      ElMessage.error('自动重连失败: ' + requestError.message)
+      throw requestError
+    }
+  }
+
   async function closeSession(sessionId) {
     try {
       await closeServerConnectionSession(sessionId)
@@ -181,6 +202,7 @@ export function useServerConnections() {
     activeSession,
     loadServers,
     connectServer,
+    reconnectSession,
     closeSession,
     activateSession,
     updateSessionStatus,

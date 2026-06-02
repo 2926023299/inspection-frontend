@@ -13,6 +13,10 @@ export function closeServerConnectionSession(sessionId) {
   return http.delete(`/server-connections/sessions/${sessionId}`)
 }
 
+export function reconnectServerConnectionSession(sessionId) {
+  return http.post(`/server-connections/sessions/${sessionId}/reconnect`)
+}
+
 export function getServerConnectionCwd(sessionId) {
   return http.get(`/server-connections/sessions/${sessionId}/cwd`)
 }

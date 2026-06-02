@@ -299,6 +299,7 @@ async function handleImportSql({ file, schema }) {
 .mysql-workbench-layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: 14px;
   flex: 1;
   height: 100%;

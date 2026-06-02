@@ -61,7 +61,7 @@ const totalSize = computed(() => rowVirtualizer.value.getTotalSize())
 
 <style scoped>
 .virtual-result-table {
-  max-height: 460px;
+  max-height: 100%;
   overflow: auto;
   border: 1px solid rgba(30, 42, 51, 0.1);
   border-radius: 8px;

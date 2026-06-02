@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import FileActionDialog from '@/components/server-connect/FileActionDialog.vue'
 import RemoteFilePanel from '@/components/server-connect/RemoteFilePanel.vue'
 import ServerCatalog from '@/components/server-connect/ServerCatalog.vue'
@@ -18,6 +19,7 @@ const {
   activeSession,
   loadServers,
   connectServer,
+  reconnectSession,
   closeSession,
   activateSession,
   updateSessionStatus,
@@ -116,6 +118,29 @@ async function handleReconnect(sessionId) {
   await connectServer(targetServerKey, reconnectPath)
 }
 
+const reconnectingSessions = new Set()
+
+async function handleAutoReconnect(sessionId) {
+  if (reconnectingSessions.has(sessionId)) return
+  reconnectingSessions.add(sessionId)
+
+  const targetSession = sessions.value.find((session) => session.sessionId === sessionId)
+  if (!targetSession) {
+    reconnectingSessions.delete(sessionId)
+    return
+  }
+
+  ElMessage.warning('SSH连接已断开，正在自动重新连接...')
+
+  try {
+    await reconnectSession(sessionId)
+  } catch (_err) {
+    // reconnectSession already shows error messages
+  }
+
+  reconnectingSessions.delete(sessionId)
+}
+
 function toggleLeftPanel() {
   if (!leftPanelCollapsed.value && terminalCollapsed.value && rightPanelCollapsed.value) {
     return
@@ -161,14 +186,22 @@ function openDialog(mode, target = null) {
 async function handleDialogConfirm(value) {
   if (!activeSession.value) return
 
-  if (dialogMode.value === 'mkdir') {
-    await createDirectoryAt(activeFileState.value.cwd, value)
-  } else if (dialogMode.value === 'rename' && dialogTarget.value) {
-    const basePath = activeFileState.value.cwd || activeSession.value.cwd
-    const targetPath = value.startsWith('/') ? value : `${basePath.replace(/\/$/, '')}/${value}`
-    await renamePath(dialogTarget.value.path, targetPath)
-  } else if (dialogMode.value === 'delete' && dialogTarget.value) {
-    await deletePath(dialogTarget.value.path, Boolean(dialogTarget.value.directory))
+  try {
+    if (dialogMode.value === 'mkdir') {
+      await createDirectoryAt(activeFileState.value.cwd, value)
+    } else if (dialogMode.value === 'rename' && dialogTarget.value) {
+      const basePath = activeFileState.value.cwd || activeSession.value.cwd
+      const targetPath = value.startsWith('/') ? value : `${basePath.replace(/\/$/, '')}/${value}`
+      await renamePath(dialogTarget.value.path, targetPath)
+    } else if (dialogMode.value === 'delete') {
+      if (!dialogTarget.value) {
+        ElMessage.warning('未选择要删除的目标')
+      } else {
+        await deletePath(dialogTarget.value.path, Boolean(dialogTarget.value.directory))
+      }
+    }
+  } catch (err) {
+    ElMessage.error(err.message || '操作失败')
   }
 
   dialogVisible.value = false
@@ -199,7 +232,12 @@ async function handleDialogConfirm(value) {
         @close="closeSession"
         @reconnect="handleReconnect"
         @toggle-collapse="toggleTerminalPanel"
-        @status-change="({ sessionId, status, message }) => updateSessionStatus(sessionId, status, message)"
+        @status-change="({ sessionId, status, message }) => {
+          updateSessionStatus(sessionId, status, message)
+          if (status === 'ssh-closed') {
+            handleAutoReconnect(sessionId)
+          }
+        }"
         @cwd-change="({ sessionId, cwd }) => updateSessionCwd(sessionId, cwd)"
       />
 

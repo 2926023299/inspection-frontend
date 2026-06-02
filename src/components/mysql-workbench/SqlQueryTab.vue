@@ -85,9 +85,9 @@ const editorHeightStyle = computed(() => ({
   '--mysql-query-editor-height': `${editorHeight.value}px`,
 }))
 
-const DEFAULT_EDITOR_HEIGHT = 320
-const MIN_EDITOR_HEIGHT = 180
-const MIN_RESULTS_HEIGHT = 220
+const DEFAULT_EDITOR_HEIGHT = 200
+const MIN_EDITOR_HEIGHT = 120
+const MIN_RESULTS_HEIGHT = 180
 const EDITOR_RESIZE_STEP = 24
 
 let editorResizeCleanup = null
@@ -529,6 +529,8 @@ defineExpose({ flushSql })
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow: hidden;
+  max-height: calc(100% - 30px);
 }
 
 .mysql-query-results.is-focus {
@@ -583,10 +585,13 @@ defineExpose({ flushSql })
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
+  min-height: 0;
   padding: 12px;
   border-radius: 8px;
   border: 1px solid rgba(30, 42, 51, 0.08);
   background: rgba(255, 252, 247, 0.82);
+  overflow: hidden;
 }
 
 .mysql-query-result.is-error {
@@ -632,6 +637,11 @@ defineExpose({ flushSql })
 .mysql-query-result__meta span.is-error {
   background: rgba(188, 75, 61, 0.12);
   color: var(--danger);
+}
+
+.mysql-query-result__table {
+  flex: 1;
+  min-height: 0;
 }
 
 .mysql-query-error-detail {

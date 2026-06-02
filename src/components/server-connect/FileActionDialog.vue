@@ -45,6 +45,7 @@ const showInput = computed(() => props.mode !== 'delete')
 const confirmButtonText = computed(() => (props.mode === 'delete' ? '确认删除' : '确认'))
 
 function handleConfirm() {
+  console.log('[DEBUG] FileActionDialog handleConfirm', { mode: props.mode, inputValue: inputValue.value })
   emit('confirm', inputValue.value.trim())
 }
 </script>
