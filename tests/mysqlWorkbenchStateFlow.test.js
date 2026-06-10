@@ -96,6 +96,14 @@ test('sql execution request has a longer timeout than ordinary api calls', () =>
   assert.match(apiSource, /http\.post\('\/mysql-workbench\/sql\/execute',\s*payload,\s*\{[\s\S]*timeout:\s*MYSQL_WORKBENCH_SQL_EXECUTE_TIMEOUT_MS/)
 })
 
+test('ddl design requests use a longer timeout than ordinary api calls', () => {
+  const apiSource = readSource('src/api/mysqlWorkbench.js')
+
+  assert.match(apiSource, /MYSQL_WORKBENCH_DDL_TIMEOUT_MS\s*=\s*600000/)
+  assert.match(apiSource, /\/mysql-workbench\/design\/execute'[\s\S]*timeout:\s*MYSQL_WORKBENCH_DDL_TIMEOUT_MS/)
+  assert.match(apiSource, /\/mysql-workbench\/design\/preview'[\s\S]*timeout:\s*MYSQL_WORKBENCH_DDL_TIMEOUT_MS/)
+})
+
 test('sql query executions are submitted asynchronously and can be canceled', () => {
   const apiSource = readSource('src/api/mysqlWorkbench.js')
   const composableSource = readSource('src/composables/useMysqlWorkbench.js')

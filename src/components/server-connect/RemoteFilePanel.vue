@@ -1,5 +1,7 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { listBookmarks, saveBookmark as apiSaveBookmark, deleteBookmark as apiDeleteBookmark } from '@/api/serverConnections'
 
 const props = defineProps({
   session: {
@@ -118,6 +120,91 @@ function handleFileCommand(command, row) {
     emit('delete', row)
   }
 }
+
+/* ---- 路径快捷方式（书签） ---- */
+const bookmarks = ref([])
+const bookmarkDialogVisible = ref(false)
+const editingBookmark = ref(null)
+const bookmarkForm = ref({ label: '', path: '', scope: 'server' })
+
+function currentServerKey() {
+  return props.session?.serverKey || null
+}
+
+async function loadBookmarks() {
+  try {
+    const res = await listBookmarks(currentServerKey())
+    bookmarks.value = Array.isArray(res) ? res : []
+  } catch {
+    bookmarks.value = []
+  }
+}
+
+onMounted(loadBookmarks)
+
+// 切换服务器时重新加载书签
+watch(() => props.session?.serverKey, () => {
+  loadBookmarks()
+})
+
+function openAddBookmark() {
+  editingBookmark.value = null
+  bookmarkForm.value = {
+    label: '',
+    path: props.state.cwd || props.session?.cwd || '/',
+    scope: 'server',
+  }
+  bookmarkDialogVisible.value = true
+}
+
+function openEditBookmark(bookmark) {
+  editingBookmark.value = bookmark
+  bookmarkForm.value = {
+    label: bookmark.label,
+    path: bookmark.path,
+    scope: bookmark.serverKey ? 'server' : 'global',
+  }
+  bookmarkDialogVisible.value = true
+}
+
+async function handleBookmarkConfirm() {
+  const label = bookmarkForm.value.label.trim()
+  const path = bookmarkForm.value.path.trim()
+  if (!label || !path) {
+    ElMessage.warning('名称和路径不能为空')
+    return
+  }
+
+  try {
+    const serverKey = bookmarkForm.value.scope === 'global' ? null : currentServerKey()
+    await apiSaveBookmark({
+      id: editingBookmark.value?.id || null,
+      label,
+      path,
+      serverKey,
+    })
+    ElMessage.success(editingBookmark.value ? '快捷路径已更新' : '快捷路径已添加')
+    await loadBookmarks()
+  } catch (err) {
+    ElMessage.error(err.message || '操作失败')
+  }
+
+  bookmarkDialogVisible.value = false
+}
+
+async function removeBookmark(bookmark) {
+  try {
+    await apiDeleteBookmark(bookmark.id)
+    await loadBookmarks()
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败')
+  }
+}
+
+function navigateBookmark(bookmark) {
+  if (!hasSession.value) return
+  emit('open-path', bookmark.path)
+}
 </script>
 
 <template>
@@ -144,6 +231,31 @@ function handleFileCommand(command, row) {
       <el-button type="primary" :disabled="!hasSession" @click="triggerUpload">上传</el-button>
       <el-button :disabled="!hasSession" @click="emit('create-directory')">新建目录</el-button>
       <input ref="uploadInputRef" type="file" multiple class="remote-files__input" @change="handleUploadChange" />
+    </div>
+
+    <div v-if="!props.collapsed" class="remote-files__bookmarks">
+      <el-tag
+        v-for="bm in bookmarks"
+        :key="bm.id"
+        :effect="bm.path === props.state.cwd ? 'dark' : 'plain'"
+        :type="bm.path === props.state.cwd ? 'warning' : (bm.serverKey ? '' : 'info')"
+        class="bookmarks__tag"
+        closable
+        @click="navigateBookmark(bm)"
+        @close.stop="removeBookmark(bm)"
+      >
+        {{ bm.serverKey ? '' : '🌐 ' }}{{ bm.label }}
+      </el-tag>
+      <el-button
+        v-if="hasSession"
+        size="small"
+        text
+        type="primary"
+        @click="openAddBookmark"
+      >
+        + 添加
+      </el-button>
+      <span v-if="!bookmarks.length && !hasSession" class="bookmarks__empty">连接服务器后可管理快捷路径</span>
     </div>
 
     <div v-if="!props.collapsed" class="remote-files__breadcrumbs">
@@ -230,6 +342,33 @@ function handleFileCommand(command, row) {
       </el-table>
     </div>
   </section>
+
+  <el-dialog
+    v-model="bookmarkDialogVisible"
+    :title="editingBookmark ? '编辑快捷路径' : '添加快捷路径'"
+    width="420px"
+    :append-to-body="true"
+    destroy-on-close
+  >
+    <el-form label-width="60px">
+      <el-form-item v-if="currentServerKey()" label="范围">
+        <el-radio-group v-model="bookmarkForm.scope">
+          <el-radio value="server">当前服务器</el-radio>
+          <el-radio value="global">全局共享</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="名称">
+        <el-input v-model="bookmarkForm.label" placeholder="例如：日志目录" maxlength="30" />
+      </el-form-item>
+      <el-form-item label="路径">
+        <el-input v-model="bookmarkForm.path" placeholder="例如：/var/log" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="bookmarkDialogVisible = false">取消</el-button>
+      <el-button type="primary" @click="handleBookmarkConfirm">确定</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
@@ -310,6 +449,30 @@ function handleFileCommand(command, row) {
 
 .remote-files__input {
   display: none;
+}
+
+/* ---- 书签（快捷路径） ---- */
+.remote-files__bookmarks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.bookmarks__tag {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.bookmarks__tag:hover {
+  transform: translateY(-1px);
+}
+
+.bookmarks__empty {
+  font-size: 12px;
+  color: var(--text-subtle);
+  opacity: 0.7;
 }
 
 .remote-files__breadcrumbs {

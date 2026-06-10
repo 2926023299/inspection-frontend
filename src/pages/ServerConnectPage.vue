@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import FileActionDialog from '@/components/server-connect/FileActionDialog.vue'
 import RemoteFilePanel from '@/components/server-connect/RemoteFilePanel.vue'
@@ -51,33 +51,25 @@ const terminalCollapsed = ref(false)
 const rightPanelCollapsed = ref(false)
 
 const connectedServerKeys = computed(() => sessions.value.map((session) => session.serverKey))
-const connectLayoutColumns = computed(() => {
-  if (leftPanelCollapsed.value && terminalCollapsed.value && !rightPanelCollapsed.value) {
-    return '56px 56px minmax(0, 1fr)'
-  }
 
-  if (!leftPanelCollapsed.value && terminalCollapsed.value && rightPanelCollapsed.value) {
-    return 'minmax(280px, 1fr) 56px 56px'
-  }
-
-  if (leftPanelCollapsed.value && !terminalCollapsed.value && rightPanelCollapsed.value) {
-    return '56px minmax(0, 1fr) 56px'
-  }
-
-  if (!leftPanelCollapsed.value && terminalCollapsed.value && !rightPanelCollapsed.value) {
-    return 'minmax(260px, 0.92fr) 56px minmax(320px, 1.08fr)'
-  }
-
-  const left = leftPanelCollapsed.value ? '56px' : '280px'
-  const terminal = terminalCollapsed.value ? '56px' : 'minmax(0, 1fr)'
-  const right = rightPanelCollapsed.value ? '56px' : '340px'
-  return `${left} ${terminal} ${right}`
-})
+/* ---- 面板宽度 ---- */
+const COLLAPSED_WIDTH = 56
+const MIN_LEFT = 220
+const MAX_LEFT = 600
+const MIN_RIGHT = 280
+const MAX_RIGHT = 900
+const leftWidth = ref(280)
+const rightWidth = ref(340)
 
 function restorePanelPreference() {
   leftPanelCollapsed.value = window.localStorage.getItem('server-connect-left-panel-collapsed') === 'true'
   terminalCollapsed.value = window.localStorage.getItem('server-connect-terminal-collapsed') === 'true'
   rightPanelCollapsed.value = window.localStorage.getItem('server-connect-right-panel-collapsed') === 'true'
+
+  const savedLeft = Number(window.localStorage.getItem('server-connect-left-width'))
+  const savedRight = Number(window.localStorage.getItem('server-connect-right-width'))
+  if (savedLeft >= MIN_LEFT && savedLeft <= MAX_LEFT) leftWidth.value = savedLeft
+  if (savedRight >= MIN_RIGHT && savedRight <= MAX_RIGHT) rightWidth.value = savedRight
 }
 
 onMounted(() => {
@@ -97,12 +89,78 @@ watch(rightPanelCollapsed, (collapsed) => {
   window.localStorage.setItem('server-connect-right-panel-collapsed', String(collapsed))
 })
 
-async function handleConnect(serverKey) {
+watch(leftWidth, (w) => {
+  window.localStorage.setItem('server-connect-left-width', String(w))
+})
+
+watch(rightWidth, (w) => {
+  window.localStorage.setItem('server-connect-right-width', String(w))
+})
+
+/* ---- 拖拽分割线 ---- */
+const dragging = ref(null) // 'left' | 'right' | null
+
+function startDrag(panel, event) {
+  event.preventDefault()
+  dragging.value = panel
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', stopDrag)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function onDrag(event) {
+  if (!dragging.value) return
+  const layoutEl = document.querySelector('.connect-layout')
+  if (!layoutEl) return
+  const rect = layoutEl.getBoundingClientRect()
+  const TERMINAL_MIN = 300
+
+  if (dragging.value === 'left') {
+    const maxAllowed = Math.min(MAX_LEFT, rect.width - rightWidth.value - TERMINAL_MIN - 12)
+    const newWidth = Math.min(maxAllowed, Math.max(MIN_LEFT, event.clientX - rect.left))
+    leftWidth.value = newWidth
+  } else if (dragging.value === 'right') {
+    const maxAllowed = Math.min(MAX_RIGHT, rect.width - leftWidth.value - TERMINAL_MIN - 12)
+    const newWidth = Math.min(maxAllowed, Math.max(MIN_RIGHT, rect.right - event.clientX))
+    rightWidth.value = newWidth
+  }
+}
+
+function stopDrag() {
+  dragging.value = null
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+})
+
+const leftStyle = computed(() => {
+  if (leftPanelCollapsed.value) return { width: COLLAPSED_WIDTH + 'px', flexShrink: 0 }
+  return { width: leftWidth.value + 'px', flexShrink: 0 }
+})
+
+const rightStyle = computed(() => {
+  if (rightPanelCollapsed.value) return { width: COLLAPSED_WIDTH + 'px', flexShrink: 0 }
+  return { width: rightWidth.value + 'px', flexShrink: 0 }
+})
+
+const terminalStyle = computed(() => {
+  if (terminalCollapsed.value) return { width: COLLAPSED_WIDTH + 'px', flexShrink: 0 }
+  return { flex: 1, minWidth: 0 }
+})
+
+async function handleConnect(serverKey, charset = 'UTF-8') {
   if (!serverKey) {
     await loadServers()
     return
   }
-  await connectServer(serverKey)
+  await connectServer(serverKey, '', charset)
   leftPanelCollapsed.value = true
   terminalCollapsed.value = false
   rightPanelCollapsed.value = true
@@ -212,52 +270,70 @@ async function handleDialogConfirm(value) {
   <div class="page-shell compact-page">
     <el-alert v-if="error" type="error" :title="error" :closable="false" show-icon />
 
-    <section class="connect-layout" :style="{ '--connect-grid-columns': connectLayoutColumns }">
-      <ServerCatalog
-        v-model="searchKeyword"
-        :servers="filteredServers"
-        :loading="loading"
-        :connecting="connecting"
-        :connected-server-keys="connectedServerKeys"
-        :collapsed="leftPanelCollapsed"
-        @toggle-collapse="toggleLeftPanel"
-        @connect="handleConnect"
+    <section class="connect-layout" :class="{ 'is-dragging': dragging }">
+      <div :style="leftStyle" class="connect-layout__panel">
+        <ServerCatalog
+          v-model="searchKeyword"
+          :servers="filteredServers"
+          :loading="loading"
+          :connecting="connecting"
+          :connected-server-keys="connectedServerKeys"
+          :collapsed="leftPanelCollapsed"
+          @toggle-collapse="toggleLeftPanel"
+          @connect="handleConnect"
+        />
+      </div>
+
+      <div
+        v-if="!leftPanelCollapsed || !terminalCollapsed"
+        class="connect-layout__splitter"
+        @mousedown="startDrag('left', $event)"
       />
 
-      <TerminalTabs
-        :sessions="sessions"
-        :active-session-id="activeSessionId"
-        :collapsed="terminalCollapsed"
-        @select="activateSession"
-        @close="closeSession"
-        @reconnect="handleReconnect"
-        @toggle-collapse="toggleTerminalPanel"
-        @status-change="({ sessionId, status, message }) => {
-          updateSessionStatus(sessionId, status, message)
-          if (status === 'ssh-closed') {
-            handleAutoReconnect(sessionId)
-          }
-        }"
-        @cwd-change="({ sessionId, cwd }) => updateSessionCwd(sessionId, cwd)"
+      <div :style="terminalStyle" class="connect-layout__panel">
+        <TerminalTabs
+          :sessions="sessions"
+          :active-session-id="activeSessionId"
+          :collapsed="terminalCollapsed"
+          @select="activateSession"
+          @close="closeSession"
+          @reconnect="handleReconnect"
+          @toggle-collapse="toggleTerminalPanel"
+          @status-change="({ sessionId, status, message }) => {
+            updateSessionStatus(sessionId, status, message)
+            if (status === 'ssh-closed') {
+              handleAutoReconnect(sessionId)
+            }
+          }"
+          @cwd-change="({ sessionId, cwd }) => updateSessionCwd(sessionId, cwd)"
+        />
+      </div>
+
+      <div
+        v-if="!terminalCollapsed || !rightPanelCollapsed"
+        class="connect-layout__splitter"
+        @mousedown="startDrag('right', $event)"
       />
 
-      <RemoteFilePanel
-        :session="activeSession"
-        :state="activeFileState"
-        :loading="fileLoading"
-        :uploading="uploading"
-        :error="fileError"
-        :collapsed="rightPanelCollapsed"
-        @toggle-collapse="toggleRightPanel"
-        @refresh="refreshFiles"
-        @go-parent="goToParent"
-        @open-path="openPath"
-        @download="downloadPath($event.path, $event.directory)"
-        @request-upload="uploadFilesTo(activeFileState.cwd || activeSession?.cwd, $event)"
-        @create-directory="openDialog('mkdir')"
-        @rename="openDialog('rename', $event)"
-        @delete="openDialog('delete', $event)"
-      />
+      <div :style="rightStyle" class="connect-layout__panel">
+        <RemoteFilePanel
+          :session="activeSession"
+          :state="activeFileState"
+          :loading="fileLoading"
+          :uploading="uploading"
+          :error="fileError"
+          :collapsed="rightPanelCollapsed"
+          @toggle-collapse="toggleRightPanel"
+          @refresh="refreshFiles"
+          @go-parent="goToParent"
+          @open-path="openPath"
+          @download="downloadPath($event.path, $event.directory)"
+          @request-upload="uploadFilesTo(activeFileState.cwd || activeSession?.cwd, $event)"
+          @create-directory="openDialog('mkdir')"
+          @rename="openDialog('rename', $event)"
+          @delete="openDialog('delete', $event)"
+        />
+      </div>
     </section>
 
     <FileActionDialog
@@ -274,27 +350,81 @@ async function handleDialogConfirm(value) {
 
 <style scoped>
 .connect-layout {
-  display: grid;
-  grid-template-columns: var(--connect-grid-columns);
-  gap: 18px;
+  display: flex;
   flex: 1;
   min-height: 0;
+  gap: 0;
+  overflow: hidden;
   align-items: stretch;
+}
+
+.connect-layout__panel {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.connect-layout__panel > :deep(*) {
+  flex: 1;
+  min-height: 0;
+}
+
+.connect-layout__splitter {
+  width: 6px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  position: relative;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.connect-layout__splitter::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  border-radius: 1px;
+  background: rgba(30, 42, 51, 0.15);
+  transition: background 0.15s, height 0.15s;
+}
+
+.connect-layout__splitter:hover::after {
+  background: rgba(195, 95, 55, 0.5);
+  height: 48px;
+}
+
+.connect-layout.is-dragging {
+  cursor: col-resize;
+}
+
+.connect-layout.is-dragging .connect-layout__splitter::after {
+  background: rgba(195, 95, 55, 0.7);
+  height: 100%;
 }
 
 @media (max-width: 1380px) {
   .connect-layout {
-    grid-template-columns: 280px minmax(0, 1fr);
+    flex-wrap: wrap;
   }
 
-  .connect-layout > :last-child {
-    grid-column: 1 / -1;
+  .connect-layout__panel {
+    flex: 1 1 300px;
+    min-width: 0;
+  }
+
+  .connect-layout__splitter {
+    display: none;
   }
 }
 
 @media (max-width: 980px) {
-  .connect-layout {
-    grid-template-columns: 1fr;
+  .connect-layout__panel {
+    flex: 1 1 100%;
   }
 }
 </style>

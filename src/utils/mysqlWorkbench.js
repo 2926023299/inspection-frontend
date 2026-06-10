@@ -446,7 +446,7 @@ function normalizeMysqlCreateTableDdl(ddl, schema, table) {
   return `${match[1]}${quoteMysqlIdentifier(table)}${normalizedDdl.slice(match[0].length)};`
 }
 
-export function buildMysqlDumpSql(schema, table, columns, rows, ddl) {
+export function buildMysqlDumpSql(schema, table, columns, rows, ddl, batchSize = 500) {
   const tbl = quoteMysqlIdentifier(table)
   const parts = [
     `-- ----------------------------`,
@@ -463,17 +463,21 @@ export function buildMysqlDumpSql(schema, table, columns, rows, ddl) {
     parts.push(`-- Records of ${table}`)
     parts.push(`-- ----------------------------`)
     const colList = columns.map((c) => quoteMysqlIdentifier(c)).join(', ')
-    const valueRows = rows.map((row) => {
-      const values = columns.map((col) => {
-        const v = row[col]
-        if (v === null || v === undefined) return 'NULL'
-        if (typeof v === 'number') return String(v)
-        return `'${String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
+    const size = Math.max(1, batchSize)
+    for (let start = 0; start < rows.length; start += size) {
+      const batch = rows.slice(start, start + size)
+      const valueRows = batch.map((row) => {
+        const values = columns.map((col) => {
+          const v = row[col]
+          if (v === null || v === undefined) return 'NULL'
+          if (typeof v === 'number') return String(v)
+          return `'${String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
+        })
+        return `(${values.join(', ')})`
       })
-      return `(${values.join(', ')})`
-    })
-    parts.push(`INSERT INTO ${tbl} (${colList}) VALUES`)
-    parts.push(valueRows.map((valueRow, index) => (index === valueRows.length - 1 ? `${valueRow};` : `${valueRow},`)).join('\n'))
+      parts.push(`INSERT INTO ${tbl} (${colList}) VALUES`)
+      parts.push(valueRows.map((valueRow, index) => (index === valueRows.length - 1 ? `${valueRow};` : `${valueRow},`)).join('\n'))
+    }
   }
   return parts.join('\n')
 }

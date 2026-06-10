@@ -2,6 +2,8 @@ import http, { buildRequestUrl } from './http'
 
 export const MYSQL_WORKBENCH_SQL_EXECUTE_TIMEOUT_MS = 600000
 
+export const MYSQL_WORKBENCH_DDL_TIMEOUT_MS = 600000
+
 export function listMysqlWorkbenchTree(includeSystemSchemas = false) {
   return http.get('/mysql-workbench/tree', {
     params: { includeSystemSchemas },
@@ -23,6 +25,7 @@ export function listMysqlSchemaTables(schema, params = {}) {
 export function getMysqlTableMetadata(schema, table) {
   return http.get('/mysql-workbench/table/metadata', {
     params: { schema, table },
+    timeout: 60000,
   })
 }
 
@@ -35,11 +38,14 @@ export function listMysqlTableColumns(schema, tables = []) {
 export function getMysqlTableDdl(schema, table) {
   return http.get('/mysql-workbench/table/ddl', {
     params: { schema, table },
+    timeout: 60000,
   })
 }
 
 export function queryMysqlTableData(payload) {
-  return http.post('/mysql-workbench/table/data/query', payload)
+  return http.post('/mysql-workbench/table/data/query', payload, {
+    timeout: MYSQL_WORKBENCH_SQL_EXECUTE_TIMEOUT_MS,
+  })
 }
 
 export function insertMysqlTableRow(payload) {
@@ -57,11 +63,15 @@ export function deleteMysqlTableRow(payload) {
 }
 
 export function previewMysqlTableDesign(payload) {
-  return http.post('/mysql-workbench/design/preview', payload)
+  return http.post('/mysql-workbench/design/preview', payload, {
+    timeout: MYSQL_WORKBENCH_DDL_TIMEOUT_MS,
+  })
 }
 
 export function executeMysqlTableDesign(payload) {
-  return http.post('/mysql-workbench/design/execute', payload)
+  return http.post('/mysql-workbench/design/execute', payload, {
+    timeout: MYSQL_WORKBENCH_DDL_TIMEOUT_MS,
+  })
 }
 
 export function executeMysqlSqlBatch(payload) {
@@ -77,7 +87,9 @@ export function createMysqlSqlExecution(payload) {
 }
 
 export function getMysqlSqlExecution(executionId) {
-  return http.get(`/mysql-workbench/sql/executions/${encodeURIComponent(executionId)}`)
+  return http.get(`/mysql-workbench/sql/executions/${encodeURIComponent(executionId)}`, {
+    timeout: 60000,
+  })
 }
 
 export function cancelMysqlSqlExecution(executionId) {

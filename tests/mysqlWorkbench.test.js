@@ -274,6 +274,23 @@ test('dump sql uses current database table names', () => {
   assert.doesNotMatch(dumpSql, /`ops_db`\.`alarm_log`/)
 })
 
+test('dump sql splits into batched insert statements', () => {
+  const rows = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }]
+  const dumpSql = buildMysqlDumpSql(
+    'ops_db',
+    'alarm_log',
+    ['id'],
+    rows,
+    'CREATE TABLE `alarm_log` (\n  `id` bigint NOT NULL\n) ENGINE=InnoDB;',
+    3,
+  )
+
+  const insertMatches = dumpSql.match(/INSERT INTO/g)
+  assert.strictEqual(insertMatches.length, 2)
+  assert.match(dumpSql, /INSERT INTO `alarm_log` \(`id`\) VALUES\n\(1\),\n\(2\),\n\(3\);/)
+  assert.match(dumpSql, /INSERT INTO `alarm_log` \(`id`\) VALUES\n\(4\),\n\(5\);/)
+})
+
 test('table data state preserves filter and paging values when patched', () => {
   const state = createMysqlTableDataState()
   const next = patchMysqlTableDataState(state, {

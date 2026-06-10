@@ -552,7 +552,28 @@ export function useMysqlWorkbench() {
     }
   }
 
-  async function executeQueryTab(key, { forceConfirmed = false, sqlOverride = null, usedSelection = false } = {}) {
+  async function confirmDangerousSql(sql) {
+    if (!detectDangerousSql(sql)) {
+      return true
+    }
+
+    try {
+      await ElMessageBox.confirm(
+        '检测到可能的高风险 SQL，确认后才会继续执行。',
+        '危险 SQL 确认',
+        {
+          type: 'warning',
+          confirmButtonText: '继续执行',
+          cancelButtonText: '取消',
+        },
+      )
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async function executeQueryTab(key, { sqlOverride = null, usedSelection = false } = {}) {
     const tab = tabs.value.find((item) => item.key === key)
     if (!tab || tab.executing) {
       return
@@ -568,21 +589,9 @@ export function useMysqlWorkbench() {
       return
     }
 
-    if (detectDangerousSql(executableSql) && !forceConfirmed) {
-      await ElMessageBox.confirm(
-        '检测到可能的高风险 SQL，确认后才会继续执行。',
-        '危险 SQL 确认',
-        {
-          type: 'warning',
-          confirmButtonText: '继续执行',
-          cancelButtonText: '取消',
-        },
-      )
-      return executeQueryTab(key, {
-        forceConfirmed: true,
-        sqlOverride: executableSql,
-        usedSelection: resolvedSql.hasSelection,
-      })
+    const confirmed = await confirmDangerousSql(executableSql)
+    if (!confirmed) {
+      return
     }
 
     tab.executing = true
@@ -595,7 +604,7 @@ export function useMysqlWorkbench() {
       const execution = await createMysqlSqlExecution({
         schema: tab.schema || '',
         sql: executableSql,
-        confirmed: forceConfirmed,
+        confirmed: true,
       })
       tab.executionId = execution.id
       tab.executionStatus = execution.status || 'RUNNING'

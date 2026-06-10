@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import TerminalPane from '@/components/server-connect/TerminalPane.vue'
 
 const props = defineProps({
@@ -18,44 +18,14 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['select', 'close', 'status-change', 'cwd-change', 'reconnect', 'toggle-collapse'])
-const terminalPaneRefs = ref({})
 
 const activeSession = computed(() => props.sessions.find((session) => session.sessionId === props.activeSessionId) || null)
-
-function setTerminalPaneRef(sessionId, instance) {
-  if (!instance) {
-    delete terminalPaneRefs.value[sessionId]
-    return
-  }
-  terminalPaneRefs.value[sessionId] = instance
-}
-
-async function copyActiveTerminal() {
-  const pane = terminalPaneRefs.value[props.activeSessionId]
-  await pane?.copyTerminal?.()
-}
-
-function clearActiveTerminal() {
-  const pane = terminalPaneRefs.value[props.activeSessionId]
-  pane?.clearTerminal?.()
-}
 </script>
 
 <template>
   <section class="terminal-tabs glass-panel" :class="{ 'is-collapsed': props.collapsed }">
     <div class="terminal-tabs__head" role="button" tabindex="0" @click="emit('toggle-collapse')">
-      <div class="terminal-tabs__label">
-        <span class="terminal-tabs__arrow">{{ props.collapsed ? '▸' : '▾' }}</span>
-        <div>
-          <p>INTERACTIVE TERMINALS</p>
-          <h2>终端会话</h2>
-        </div>
-      </div>
-      <div v-if="!props.collapsed" class="terminal-tabs__actions">
-        <el-button text :disabled="!activeSession" @click.stop="clearActiveTerminal">清屏</el-button>
-        <el-button text :disabled="!activeSession" @click.stop="copyActiveTerminal">复制</el-button>
-        <el-button text :disabled="!activeSession" @click.stop="emit('reconnect', activeSession?.sessionId)">重连</el-button>
-      </div>
+      <span v-if="props.collapsed" class="terminal-tabs__arrow">{{ props.collapsed ? '▸' : '▾' }}</span>
     </div>
 
     <div v-if="!props.collapsed" class="terminal-tabs__tablist">
@@ -86,11 +56,11 @@ function clearActiveTerminal() {
       <TerminalPane
         v-for="session in props.sessions"
         :key="session.sessionId"
-        :ref="(instance) => setTerminalPaneRef(session.sessionId, instance)"
         :session="session"
         :active="props.activeSessionId === session.sessionId"
         @status-change="emit('status-change', $event)"
         @cwd-change="emit('cwd-change', $event)"
+        @reconnect="emit('reconnect', $event)"
       />
     </div>
   </section>
@@ -113,41 +83,16 @@ function clearActiveTerminal() {
 
 .terminal-tabs__head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 18px 20px 8px;
-  cursor: pointer;
-}
-
-.terminal-tabs__label {
-  display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  padding: 10px 18px 6px;
+  cursor: pointer;
 }
 
 .terminal-tabs__arrow {
   color: rgba(240, 237, 231, 0.68);
   font-size: 14px;
   line-height: 1;
-}
-
-.terminal-tabs__label p {
-  margin: 0;
-  color: rgba(240, 237, 231, 0.54);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-}
-
-.terminal-tabs__label h2 {
-  margin: 10px 0 0;
-  font-size: 24px;
-}
-
-.terminal-tabs__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .terminal-tabs__tablist {
@@ -239,22 +184,6 @@ function clearActiveTerminal() {
 
 .terminal-tabs.is-collapsed .terminal-tabs__head {
   justify-content: center;
-  padding: 20px 8px 10px;
-}
-
-.terminal-tabs.is-collapsed .terminal-tabs__label {
-  flex-direction: column;
-}
-
-.terminal-tabs.is-collapsed .terminal-tabs__label p,
-.terminal-tabs.is-collapsed .terminal-tabs__label h2 {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  margin: 0;
-}
-
-.terminal-tabs.is-collapsed .terminal-tabs__label h2 {
-  font-size: 18px;
-  letter-spacing: 0.14em;
+  padding: 14px 8px 6px;
 }
 </style>

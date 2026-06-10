@@ -242,11 +242,17 @@ export function useTerminalSession(sessionRef, activeRef, onStatus, onCwd) {
     terminal?.clear()
   }
 
+  function sendInput(text) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return
+    socket.send(JSON.stringify({ type: 'input', data: text }))
+  }
+
   return {
     terminalRef,
     status,
     resizeTerminal,
     clearTerminal,
     copyTerminal,
+    sendInput,
   }
 }

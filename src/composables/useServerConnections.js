@@ -97,7 +97,7 @@ export function useServerConnections() {
     }
   }
 
-  async function connectServer(serverKey, initialPath = '') {
+  async function connectServer(serverKey, initialPath = '', charset = 'UTF-8') {
     const existing = sessions.value.find((session) => session.serverKey === serverKey)
     if (existing) {
       activeSessionId.value = existing.sessionId
@@ -107,9 +107,14 @@ export function useServerConnections() {
 
     connecting.value = true
     try {
-      const session = await openServerConnectionSession({ serverKey, initialPath: initialPath || null })
+      const session = await openServerConnectionSession({
+        serverKey,
+        initialPath: initialPath || null,
+        charset: charset || 'UTF-8'
+      })
       sessions.value.push({
         ...session,
+        charset: charset || 'UTF-8',
         status: 'connecting',
         message: '正在建立终端连接',
       })

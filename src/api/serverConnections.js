@@ -103,3 +103,33 @@ export async function downloadRemoteFile(sessionId, path) {
 export function buildTerminalWebSocketUrl(sessionId) {
   return buildWebSocketUrl(`/ws/server-connections/terminal/${encodeURIComponent(sessionId)}`)
 }
+
+/* ---- 远程文件快捷路径（书签） ---- */
+
+export function listBookmarks(serverKey) {
+  return http.get('/server-connections/bookmarks', {
+    params: serverKey ? { serverKey } : {},
+  })
+}
+
+export function saveBookmark(payload) {
+  return http.post('/server-connections/bookmarks', payload)
+}
+
+export function deleteBookmark(id) {
+  return http.delete(`/server-connections/bookmarks/${id}`)
+}
+
+/* ---- 服务器连接快捷路径（收藏） ---- */
+
+export function listServerBookmarks() {
+  return http.get('/server-connections/server-bookmarks')
+}
+
+export function saveServerBookmark(payload) {
+  return http.post('/server-connections/server-bookmarks', payload)
+}
+
+export function deleteServerBookmark(id) {
+  return http.delete(`/server-connections/server-bookmarks/${id}`)
+}
