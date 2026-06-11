@@ -456,7 +456,7 @@ defineExpose({ flushSql })
   padding: 0 10px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(30, 42, 51, 0.06);
+  background: rgba(30, 41, 59, 0.06);
   color: var(--text-subtle);
   font-size: 12px;
   text-overflow: ellipsis;
@@ -509,7 +509,7 @@ defineExpose({ flushSql })
   width: 72px;
   height: 4px;
   border-radius: 999px;
-  background: rgba(30, 42, 51, 0.2);
+  background: rgba(30, 41, 59, 0.2);
   transition: width 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -517,8 +517,8 @@ defineExpose({ flushSql })
 .mysql-query-resize:focus-visible .mysql-query-resize__grip,
 .mysql-query-panel.is-resizing-editor .mysql-query-resize__grip {
   width: 96px;
-  background: rgba(195, 95, 55, 0.62);
-  box-shadow: 0 0 0 4px rgba(195, 95, 55, 0.12);
+  background: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
 .mysql-query-resize:focus-visible {
@@ -589,8 +589,8 @@ defineExpose({ flushSql })
   min-height: 0;
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid rgba(30, 42, 51, 0.08);
-  background: rgba(255, 252, 247, 0.82);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  background: rgba(255, 255, 255, 0.85);
   overflow: hidden;
 }
 

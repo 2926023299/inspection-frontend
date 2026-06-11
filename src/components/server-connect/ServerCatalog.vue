@@ -352,8 +352,8 @@ async function handleAliasConfirm() {
   gap: 12px;
   padding: 16px;
   border-radius: 18px;
-  border: 1px solid rgba(30, 42, 51, 0.08);
-  background: rgba(255, 252, 247, 0.82);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  background: rgba(255, 255, 255, 0.85);
   transition: border-color 0.2s;
 }
 
@@ -430,7 +430,7 @@ async function handleAliasConfirm() {
   flex-shrink: 0;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(30, 42, 51, 0.08);
+  background: rgba(30, 41, 59, 0.08);
   font-size: 11px;
   letter-spacing: 0.08em;
 }

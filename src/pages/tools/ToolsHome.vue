@@ -96,8 +96,8 @@ function goTool(route) {
 }
 
 .tool-entry:hover {
-  border-color: var(--brand, #c35f37);
-  box-shadow: 0 2px 12px rgba(195, 95, 55, 0.1);
+  border-color: var(--brand, #3b82f6);
+  box-shadow: 0 2px 12px rgba(59, 130, 246, 0.1);
   transform: translateY(-2px);
 }
 
@@ -107,7 +107,7 @@ function goTool(route) {
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: var(--brand-soft, rgba(195, 95, 55, 0.1));
+  background: var(--brand-soft, rgba(59, 130, 246, 0.1));
   font-size: 22px;
   flex-shrink: 0;
 }

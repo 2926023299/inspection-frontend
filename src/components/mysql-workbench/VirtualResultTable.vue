@@ -63,7 +63,7 @@ const totalSize = computed(() => rowVirtualizer.value.getTotalSize())
 .virtual-result-table {
   max-height: 100%;
   overflow: auto;
-  border: 1px solid rgba(30, 42, 51, 0.1);
+  border: 1px solid rgba(30, 41, 59, 0.1);
   border-radius: 8px;
   background: #fff;
 }
@@ -79,7 +79,7 @@ const totalSize = computed(() => rowVirtualizer.value.getTotalSize())
   display: grid;
   min-height: 38px;
   background: #f7f3ec;
-  border-bottom: 1px solid rgba(30, 42, 51, 0.1);
+  border-bottom: 1px solid rgba(30, 41, 59, 0.1);
 }
 
 .virtual-result-table__body {
@@ -93,7 +93,7 @@ const totalSize = computed(() => rowVirtualizer.value.getTotalSize())
   display: grid;
   width: 100%;
   min-height: 36px;
-  border-bottom: 1px solid rgba(30, 42, 51, 0.06);
+  border-bottom: 1px solid rgba(30, 41, 59, 0.06);
 }
 
 .virtual-result-table__cell {
@@ -105,7 +105,7 @@ const totalSize = computed(() => rowVirtualizer.value.getTotalSize())
   line-height: 1.45;
   text-overflow: ellipsis;
   white-space: nowrap;
-  border-right: 1px solid rgba(30, 42, 51, 0.06);
+  border-right: 1px solid rgba(30, 41, 59, 0.06);
 }
 
 .virtual-result-table__cell.is-header {

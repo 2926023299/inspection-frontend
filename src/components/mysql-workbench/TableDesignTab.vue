@@ -315,8 +315,8 @@ async function executeChanges() {
   flex: none;
   padding: 14px;
   border-radius: 18px;
-  border: 1px solid rgba(30, 42, 51, 0.08);
-  background: rgba(255, 252, 247, 0.82);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .mysql-design-table {
@@ -364,8 +364,8 @@ async function executeChanges() {
   min-height: 160px;
   padding: 16px;
   border-radius: 16px;
-  background: linear-gradient(180deg, #182535, #101a29);
-  color: #f1e8dd;
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  color: #e2e8f0;
   font-family: Consolas, "Cascadia Code", monospace;
   font-size: 13px;
   line-height: 1.65;

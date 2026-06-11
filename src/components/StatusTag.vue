@@ -26,8 +26,8 @@ const statusMeta = computed(() => getStatusMeta(props.status))
   gap: 6px;
   padding: 5px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(30, 42, 51, 0.1);
-  background: rgba(255, 252, 247, 0.9);
+  border: 1px solid rgba(30, 41, 59, 0.1);
+  background: rgba(255, 255, 255, 0.95);
   color: var(--text-main);
   font-size: 11px;
   font-weight: 700;
@@ -39,7 +39,7 @@ const statusMeta = computed(() => getStatusMeta(props.status))
   height: 7px;
   border-radius: 50%;
   background: var(--brand);
-  box-shadow: 0 0 0 3px rgba(195, 95, 55, 0.12);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .status-tag[data-tone="success"] {

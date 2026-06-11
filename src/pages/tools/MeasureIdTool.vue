@@ -376,8 +376,8 @@ async function copyText(text) {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 500;
-  background: var(--brand-soft, rgba(195, 95, 55, 0.12));
-  color: var(--brand, #c35f37);
+  background: var(--brand-soft, rgba(59, 130, 246, 0.1));
+  color: var(--brand, #3b82f6);
 }
 
 .mid-form {
@@ -426,13 +426,13 @@ async function copyText(text) {
 }
 
 .result-item:hover {
-  background: var(--bg-hover, #f0ece6);
+  background: var(--bg-hover, #f1f5f9);
 }
 
 .result-item--highlight {
   grid-column: 1 / -1;
-  background: var(--brand-soft, rgba(195, 95, 55, 0.08));
-  border: 1px solid var(--brand, rgba(195, 95, 55, 0.2));
+  background: var(--brand-soft, rgba(59, 130, 246, 0.06));
+  border: 1px solid var(--brand, rgba(59, 130, 246, 0.2));
 }
 
 .result-item--highlight .result-value {
@@ -557,7 +557,7 @@ async function copyText(text) {
 }
 
 .ots-td-key:hover {
-  color: var(--brand, #c35f37);
+  color: var(--brand, #3b82f6);
 }
 
 @media (max-width: 720px) {

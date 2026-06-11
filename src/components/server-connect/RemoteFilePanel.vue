@@ -492,7 +492,7 @@ function navigateBookmark(bookmark) {
 .breadcrumb-button {
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(30, 42, 51, 0.06);
+  background: rgba(30, 41, 59, 0.06);
   color: var(--text-subtle);
 }
 
@@ -521,7 +521,7 @@ function navigateBookmark(bookmark) {
 }
 
 .remote-files__table.is-drag-active {
-  outline: 2px dashed rgba(195, 95, 55, 0.4);
+  outline: 2px dashed rgba(59, 130, 246, 0.4);
   outline-offset: -8px;
 }
 

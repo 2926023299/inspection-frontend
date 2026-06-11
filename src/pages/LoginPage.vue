@@ -141,11 +141,11 @@ async function handleSubmit() {
   min-height: calc(100vh - 36px);
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(380px, 0.92fr);
-  border-radius: 30px;
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(30, 42, 51, 0.12);
-  box-shadow: 0 24px 64px rgba(63, 55, 43, 0.16);
-  background: rgba(255, 252, 247, 0.88);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  box-shadow: 0 8px 32px rgba(30, 41, 59, 0.1);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .login-brand-panel {
@@ -154,10 +154,10 @@ async function handleSubmit() {
   justify-content: space-between;
   gap: 24px;
   padding: 36px 34px 30px;
-  color: #f6efe5;
+  color: #f1f5f9;
   background:
-    radial-gradient(circle at top left, rgba(195, 95, 55, 0.28), transparent 24%),
-    linear-gradient(180deg, #172437 0%, #101a29 100%);
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.2), transparent 24%),
+    linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
 }
 
 .login-brand-chip {
@@ -182,7 +182,7 @@ async function handleSubmit() {
 .login-kicker,
 .login-panel-kicker {
   margin: 0;
-  color: rgba(246, 239, 229, 0.62);
+  color: rgba(241, 245, 249, 0.62);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -198,7 +198,7 @@ async function handleSubmit() {
 .login-description {
   margin: 0;
   max-width: 440px;
-  color: rgba(246, 239, 229, 0.74);
+  color: rgba(241, 245, 249, 0.74);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -220,7 +220,7 @@ async function handleSubmit() {
 }
 
 .login-brand-item span {
-  color: rgba(245, 239, 231, 0.44);
+  color: rgba(226, 232, 240, 0.44);
   font-size: 18px;
   font-weight: 700;
 }
@@ -235,16 +235,16 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   padding: 28px 24px;
-  background: linear-gradient(180deg, rgba(255, 252, 247, 0.92), rgba(247, 241, 231, 0.96));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
 }
 
 .login-form-card {
   width: min(420px, 100%);
   padding: 32px 28px;
-  border-radius: 28px;
-  border: 1px solid rgba(30, 42, 51, 0.1);
-  background: rgba(255, 253, 248, 0.94);
-  box-shadow: 0 22px 48px rgba(63, 55, 43, 0.12);
+  border-radius: 16px;
+  border: 1px solid rgba(30, 41, 59, 0.06);
+  background: #ffffff;
+  box-shadow: 0 4px 24px rgba(30, 41, 59, 0.08);
 }
 
 .login-panel-kicker {
@@ -275,7 +275,7 @@ async function handleSubmit() {
   border: none;
   border-radius: 16px;
   background: linear-gradient(135deg, var(--brand), var(--brand-strong));
-  color: #fff8f2;
+  color: #fff;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -285,7 +285,7 @@ async function handleSubmit() {
 
 .login-submit:hover:enabled {
   transform: translateY(-1px);
-  box-shadow: 0 16px 28px rgba(195, 95, 55, 0.24);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
 }
 
 .login-submit:disabled {

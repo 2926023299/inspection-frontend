@@ -389,12 +389,12 @@ async function handleDialogConfirm(value) {
   width: 2px;
   height: 32px;
   border-radius: 1px;
-  background: rgba(30, 42, 51, 0.15);
+  background: rgba(30, 41, 59, 0.15);
   transition: background 0.15s, height 0.15s;
 }
 
 .connect-layout__splitter:hover::after {
-  background: rgba(195, 95, 55, 0.5);
+  background: rgba(59, 130, 246, 0.5);
   height: 48px;
 }
 
@@ -403,7 +403,7 @@ async function handleDialogConfirm(value) {
 }
 
 .connect-layout.is-dragging .connect-layout__splitter::after {
-  background: rgba(195, 95, 55, 0.7);
+  background: rgba(59, 130, 246, 0.7);
   height: 100%;
 }
 

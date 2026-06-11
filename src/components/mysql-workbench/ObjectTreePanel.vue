@@ -273,7 +273,7 @@ onBeforeUnmount(stopListener)
   gap: 14px;
   min-width: 0;
   padding: 14px;
-  background: rgba(247, 241, 231, 0.92);
+  background: rgba(241, 245, 249, 0.95);
   transition: padding 0.25s ease;
 }
 
@@ -429,7 +429,7 @@ onBeforeUnmount(stopListener)
 }
 
 .object-tree-node__more:hover {
-  background: rgba(195, 95, 55, 0.14);
+  background: rgba(59, 130, 246, 0.1);
   color: var(--brand-strong);
 }
 
@@ -443,7 +443,7 @@ onBeforeUnmount(stopListener)
 }
 
 :deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background: rgba(195, 95, 55, 0.14);
+  background: rgba(59, 130, 246, 0.1);
   color: var(--brand-strong);
 }
 </style>
@@ -468,7 +468,7 @@ onBeforeUnmount(stopListener)
 }
 
 .tree-context-menu__item:hover {
-  background: rgba(195, 95, 55, 0.1);
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .tree-context-menu__item--danger {

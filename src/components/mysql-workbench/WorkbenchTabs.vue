@@ -51,7 +51,7 @@ function handleTabClick(tabContext) {
   align-items: center;
   gap: 4px;
   padding: 0 16px;
-  border-bottom: 1px solid rgba(30, 42, 51, 0.08);
+  border-bottom: 1px solid rgba(30, 41, 59, 0.08);
 }
 
 .workbench-tabs__tabs {

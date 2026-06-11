@@ -74,7 +74,7 @@ const activeSession = computed(() => props.sessions.find((session) => session.se
   min-height: 0;
   overflow: hidden;
   background: linear-gradient(180deg, #121b2a 0%, #0c1320 100%);
-  color: #f0ede7;
+  color: #e2e8f0;
 }
 
 .terminal-tabs::before {
@@ -115,8 +115,8 @@ const activeSession = computed(() => props.sessions.find((session) => session.se
 }
 
 .terminal-tab.is-active {
-  border-color: rgba(195, 95, 55, 0.42);
-  background: rgba(195, 95, 55, 0.14);
+  border-color: rgba(59, 130, 246, 0.42);
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .terminal-tab__status {
@@ -169,7 +169,7 @@ const activeSession = computed(() => props.sessions.find((session) => session.se
 
 .terminal-tabs__collapsed-summary strong {
   font-size: 26px;
-  color: #f0ede7;
+  color: #e2e8f0;
 }
 
 .terminal-tabs__body {

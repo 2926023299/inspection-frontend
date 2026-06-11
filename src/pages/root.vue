@@ -185,10 +185,10 @@ function getStatCardQuery(label) {
   width: 100%;
   padding: 14px 16px;
   border-radius: 16px;
-  border: 1px solid rgba(30, 42, 51, 0.08);
-  background: rgba(255, 252, 247, 0.92);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  background: rgba(255, 255, 255, 0.95);
   text-align: left;
-  box-shadow: 0 12px 28px rgba(52, 47, 39, 0.08);
+  box-shadow: 0 4px 16px rgba(30, 41, 59, 0.06);
 }
 
 .focus-row[data-tone='danger'] {

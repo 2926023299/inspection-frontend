@@ -57,11 +57,10 @@ const props = defineProps({
   gap: 10px;
   min-height: 112px;
   padding: 16px 16px 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(30, 42, 51, 0.1);
-  background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(250, 245, 237, 0.92));
-  box-shadow: 0 16px 36px rgba(52, 47, 39, 0.14);
+  border-radius: 12px;
+  border: 1px solid rgba(30, 41, 59, 0.06);
+  background: #ffffff;
+  box-shadow: 0 2px 12px rgba(30, 41, 59, 0.06);
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
@@ -70,8 +69,8 @@ const props = defineProps({
   position: absolute;
   inset: auto auto 0 0;
   width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, var(--brand), rgba(195, 95, 55, 0.08));
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand), rgba(59, 130, 246, 0.1));
 }
 
 .metric-card::before {
@@ -79,35 +78,35 @@ const props = defineProps({
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   transform: rotate(12deg);
-  background: rgba(195, 95, 55, 0.08);
+  background: rgba(59, 130, 246, 0.06);
 }
 
 .metric-card[data-tone="success"]::after {
-  background: linear-gradient(90deg, var(--success), rgba(47, 125, 99, 0.08));
+  background: linear-gradient(90deg, var(--success), rgba(34, 197, 94, 0.1));
 }
 
 .metric-card[data-tone="success"]::before {
-  background: rgba(47, 125, 99, 0.1);
+  background: rgba(34, 197, 94, 0.08);
 }
 
 .metric-card[data-tone="warning"]::after {
-  background: linear-gradient(90deg, var(--warning), rgba(185, 134, 44, 0.08));
+  background: linear-gradient(90deg, var(--warning), rgba(245, 158, 11, 0.1));
 }
 
 .metric-card[data-tone="warning"]::before {
-  background: rgba(185, 134, 44, 0.1);
+  background: rgba(245, 158, 11, 0.08);
 }
 
 .metric-card[data-tone="danger"]::after {
-  background: linear-gradient(90deg, var(--danger), rgba(188, 75, 61, 0.08));
+  background: linear-gradient(90deg, var(--danger), rgba(239, 68, 68, 0.1));
 }
 
 .metric-card[data-tone="danger"]::before {
-  background: rgba(188, 75, 61, 0.1);
+  background: rgba(239, 68, 68, 0.08);
 }
 
 .metric-head,
@@ -125,40 +124,40 @@ const props = defineProps({
 }
 
 .metric-signal {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--brand);
-  box-shadow: 0 0 0 4px rgba(195, 95, 55, 0.12);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .metric-card[data-tone="success"] .metric-signal {
   background: var(--success);
-  box-shadow: 0 0 0 6px rgba(47, 125, 99, 0.12);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
 }
 
 .metric-card[data-tone="warning"] .metric-signal {
   background: var(--warning);
-  box-shadow: 0 0 0 6px rgba(185, 134, 44, 0.12);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
 }
 
 .metric-card[data-tone="danger"] .metric-signal {
   background: var(--danger);
-  box-shadow: 0 0 0 6px rgba(188, 75, 61, 0.12);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 .metric-label {
   color: var(--text-subtle);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .metric-value {
   font-size: 28px;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .metric-caption {
@@ -173,19 +172,19 @@ const props = defineProps({
 
 .metric-card[data-interactive="true"]:hover {
   transform: translateY(-2px);
-  border-color: rgba(195, 95, 55, 0.3);
-  box-shadow: 0 20px 40px rgba(52, 47, 39, 0.18);
+  border-color: rgba(59, 130, 246, 0.2);
+  box-shadow: 0 4px 20px rgba(30, 41, 59, 0.1);
 }
 
 .metric-card[data-active="true"] {
   transform: translateY(-2px);
-  border-color: rgba(195, 95, 55, 0.48);
+  border-color: rgba(59, 130, 246, 0.35);
   box-shadow:
-    0 24px 46px rgba(52, 47, 39, 0.2),
-    inset 0 0 0 1px rgba(195, 95, 55, 0.18);
+    0 4px 20px rgba(30, 41, 59, 0.1),
+    inset 0 0 0 1px rgba(59, 130, 246, 0.12);
 }
 
 .metric-card[data-active="true"]::before {
-  background: rgba(30, 42, 51, 0.1);
+  background: rgba(59, 130, 246, 0.1);
 }
 </style>

@@ -214,8 +214,8 @@ function handleSizeChange(value) {
   min-height: 0;
   padding: 14px;
   border-radius: 18px;
-  border: 1px solid rgba(30, 42, 51, 0.08);
-  background: rgba(255, 252, 247, 0.82);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .mysql-history-pagination {
@@ -253,8 +253,8 @@ function handleSizeChange(value) {
 .mysql-history-statement {
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid rgba(30, 42, 51, 0.08);
-  background: rgba(250, 246, 238, 0.88);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  background: rgba(248, 250, 252, 0.9);
 }
 
 .mysql-history-card h3,

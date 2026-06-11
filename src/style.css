@@ -1,9 +1,9 @@
 :root {
-  color: #1e2a33;
+  color: var(--text-main);
   background:
-    radial-gradient(circle at top left, rgba(200, 102, 52, 0.16), transparent 26%),
-    radial-gradient(circle at top right, rgba(17, 44, 79, 0.18), transparent 32%),
-    linear-gradient(180deg, #ece4d7 0%, #e6dfd4 100%);
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 26%),
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.06), transparent 32%),
+    linear-gradient(180deg, #f0f2f5 0%, #e8ecf1 100%);
   font-family: "Bahnschrift SemiCondensed", "Segoe UI Variable Display", "Microsoft YaHei UI", "PingFang SC", sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -11,33 +11,39 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --app-bg: #e6dfd4;
-  --canvas-bg: rgba(247, 241, 231, 0.84);
-  --canvas-strong: #fbf8f1;
-  --panel-bg: rgba(250, 246, 238, 0.9);
-  --panel-strong: #fffdf8;
-  --panel-border: rgba(36, 42, 49, 0.12);
-  --panel-shadow: 0 18px 48px rgba(63, 55, 43, 0.16);
-  --line-soft: rgba(54, 61, 70, 0.12);
-  --text-main: #1e2a33;
-  --text-subtle: #6c757f;
-  --rail-bg: linear-gradient(180deg, #172437 0%, #101a29 100%);
-  --rail-surface: rgba(255, 255, 255, 0.06);
-  --brand: #c35f37;
-  --brand-strong: #a5482a;
-  --brand-soft: rgba(195, 95, 55, 0.12);
-  --danger: #bc4b3d;
-  --warning: #b9862c;
-  --success: #2f7d63;
-  --radius-xl: 26px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
+  --app-bg: #f0f2f5;
+  --canvas-bg: rgba(240, 242, 245, 0.84);
+  --canvas-strong: #f8fafc;
+  --panel-bg: rgba(255, 255, 255, 0.92);
+  --panel-strong: #ffffff;
+  --panel-border: rgba(30, 41, 59, 0.08);
+  --panel-shadow: 0 4px 24px rgba(30, 41, 59, 0.08);
+  --line-soft: rgba(30, 41, 59, 0.08);
+  --text-main: #1e293b;
+  --text-subtle: #64748b;
+  --rail-bg: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  --rail-surface: rgba(255, 255, 255, 0.05);
+  --brand: #3b82f6;
+  --brand-strong: #2563eb;
+  --brand-soft: rgba(59, 130, 246, 0.1);
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --success: #22c55e;
+  --table-header-bg: #f1f5f9;
+  --table-header-text: #475569;
+  --table-row-bg: rgba(255, 255, 255, 0.85);
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --body-glow-1: rgba(255, 255, 255, 0.5);
+  --body-glow-2: rgba(255, 255, 255, 0.25);
+  --radius-xl: 16px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
   --compact-gap: 14px;
   --compact-panel-padding: 16px;
   --compact-hero-padding-y: 18px;
   --compact-hero-padding-x: 22px;
   --compact-toolbar-height: 40px;
-  --compact-content-radius: 18px;
+  --compact-content-radius: 12px;
 }
 
 * {
@@ -62,8 +68,8 @@ body {
   min-width: 320px;
   color: var(--text-main);
   background:
-    linear-gradient(90deg, rgba(30, 42, 51, 0.04) 1px, transparent 1px),
-    linear-gradient(rgba(30, 42, 51, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 41, 59, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(30, 41, 59, 0.03) 1px, transparent 1px),
     var(--app-bg);
   background-size: 44px 44px, 44px 44px, auto;
 }
@@ -73,8 +79,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.38), transparent 26%),
-    radial-gradient(circle at 80% 15%, rgba(255, 255, 255, 0.18), transparent 24%);
+    radial-gradient(circle at 20% 0%, var(--body-glow-1), transparent 26%),
+    radial-gradient(circle at 80% 15%, var(--body-glow-2), transparent 24%);
   pointer-events: none;
 }
 
@@ -131,9 +137,9 @@ a {
 
 .page-hero {
   background:
-    linear-gradient(135deg, rgba(18, 28, 44, 0.98), rgba(28, 41, 61, 0.96)),
-    linear-gradient(180deg, rgba(195, 95, 55, 0.1), transparent 65%);
-  color: #f6efe5;
+    linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96)),
+    linear-gradient(180deg, rgba(59, 130, 246, 0.1), transparent 65%);
+  color: #f1f5f9;
   padding: 34px 34px 30px;
 }
 
@@ -147,8 +153,8 @@ a {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 34px 34px;
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.68), transparent 88%);
   pointer-events: none;
@@ -161,7 +167,7 @@ a {
   width: 260px;
   height: 260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(195, 95, 55, 0.36), transparent 68%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 68%);
   pointer-events: none;
 }
 
@@ -189,7 +195,7 @@ a {
 .hero-subtitle {
   margin: 14px 0 0;
   max-width: 760px;
-  color: rgba(246, 239, 229, 0.74);
+  color: rgba(241, 245, 249, 0.74);
   font-size: 15px;
 }
 
@@ -232,7 +238,7 @@ a {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
-  color: rgba(246, 239, 229, 0.84);
+  color: rgba(241, 245, 249, 0.84);
 }
 
 .compact-page .meta-inline span {
@@ -241,7 +247,7 @@ a {
 
 .content-panel,
 .glass-panel {
-  background: linear-gradient(180deg, rgba(250, 246, 238, 0.95), rgba(247, 241, 231, 0.92));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94));
 }
 
 .page-toolbar {
@@ -275,7 +281,7 @@ a {
 .page-toolbar__meta span {
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(30, 42, 51, 0.06);
+  background: rgba(30, 41, 59, 0.05);
   color: var(--text-subtle);
   font-size: 12px;
 }
@@ -298,9 +304,9 @@ a {
   position: absolute;
   inset: 0 auto auto 0;
   width: 100%;
-  height: 6px;
-  background: linear-gradient(90deg, var(--brand), rgba(195, 95, 55, 0.15));
-  opacity: 0.68;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand), rgba(59, 130, 246, 0.12));
+  opacity: 0.8;
   pointer-events: none;
 }
 
@@ -373,8 +379,10 @@ a {
   color: var(--success);
 }
 
+/* ---- Element Plus 主题覆盖 ---- */
+
 .el-button {
-  border-radius: 14px;
+  border-radius: 8px;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -397,21 +405,21 @@ a {
 .el-select__wrapper,
 .el-textarea__inner,
 .el-date-editor.el-input__wrapper {
-  border-radius: 14px !important;
-  background: rgba(255, 252, 247, 0.92) !important;
-  box-shadow: inset 0 0 0 1px rgba(30, 42, 51, 0.1) !important;
+  border-radius: 8px !important;
+  background: var(--input-bg) !important;
+  box-shadow: inset 0 0 0 1px rgba(30, 41, 59, 0.1) !important;
 }
 
 .el-input__wrapper.is-focus,
 .el-select__wrapper.is-focused,
 .el-date-editor.el-input__wrapper.is-focus {
   box-shadow:
-    inset 0 0 0 1px rgba(195, 95, 55, 0.42) !important,
-    0 0 0 4px rgba(195, 95, 55, 0.08) !important;
+    inset 0 0 0 1px rgba(59, 130, 246, 0.5) !important,
+    0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
 .el-alert {
-  border-radius: 16px;
+  border-radius: 10px;
 }
 
 .el-message-box,
@@ -421,12 +429,12 @@ a {
 }
 
 .el-table {
-  --el-table-border-color: rgba(30, 42, 51, 0.1);
-  --el-table-header-bg-color: rgba(30, 42, 51, 0.92);
-  --el-table-header-text-color: #f8f1e8;
-  --el-table-row-hover-bg-color: rgba(195, 95, 55, 0.06);
+  --el-table-border-color: var(--line-soft);
+  --el-table-header-bg-color: var(--table-header-bg);
+  --el-table-header-text-color: var(--table-header-text);
+  --el-table-row-hover-bg-color: rgba(59, 130, 246, 0.04);
   background: transparent;
-  border-radius: 18px;
+  border-radius: 10px;
   overflow: hidden;
 }
 
@@ -437,10 +445,16 @@ a {
 .el-table th.el-table__cell {
   letter-spacing: 0.06em;
   font-size: 12px;
+  font-weight: 700;
 }
 
 .el-table td.el-table__cell {
-  background: rgba(255, 252, 247, 0.76);
+  background: var(--table-row-bg);
+  transition: box-shadow 0.15s ease;
+}
+
+.el-table__row:hover td:first-child {
+  box-shadow: inset 3px 0 0 var(--brand);
 }
 
 .compact-page .el-table th.el-table__cell,
@@ -450,11 +464,11 @@ a {
 }
 
 .el-table .table-row-warning td.el-table__cell {
-  background: linear-gradient(90deg, rgba(185, 134, 44, 0.08), rgba(255, 252, 247, 0.76));
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.06), rgba(255, 255, 255, 0.85));
 }
 
 .el-table .table-row-danger td.el-table__cell {
-  background: linear-gradient(90deg, rgba(188, 75, 61, 0.1), rgba(255, 252, 247, 0.76));
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.06), rgba(255, 255, 255, 0.85));
 }
 
 .el-pagination {
@@ -509,6 +523,89 @@ a {
   }
 }
 
+/* ---- 页面切换过渡动画 ---- */
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ---- 暗色模式 ---- */
+
+[data-theme="dark"] {
+  --app-bg: #0f172a;
+  --canvas-bg: rgba(15, 23, 42, 0.84);
+  --canvas-strong: #1e293b;
+  --panel-bg: rgba(30, 41, 59, 0.92);
+  --panel-strong: #1e293b;
+  --panel-border: rgba(148, 163, 184, 0.1);
+  --panel-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  --line-soft: rgba(148, 163, 184, 0.1);
+  --text-main: #e2e8f0;
+  --text-subtle: #94a3b8;
+  --rail-bg: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  --rail-surface: rgba(255, 255, 255, 0.04);
+  --brand-soft: rgba(59, 130, 246, 0.15);
+  --table-header-bg: #1e293b;
+  --table-header-text: #94a3b8;
+  --table-row-bg: rgba(30, 41, 59, 0.6);
+  --input-bg: rgba(30, 41, 59, 0.8);
+  --body-glow-1: rgba(59, 130, 246, 0.06);
+  --body-glow-2: rgba(99, 102, 241, 0.04);
+}
+
+[data-theme="dark"] body {
+  background:
+    linear-gradient(90deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(148, 163, 184, 0.03) 1px, transparent 1px),
+    var(--app-bg);
+  background-size: 44px 44px, 44px 44px, auto;
+}
+
+[data-theme="dark"] .page-hero {
+  background:
+    linear-gradient(135deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.96)),
+    linear-gradient(180deg, rgba(59, 130, 246, 0.08), transparent 65%);
+}
+
+[data-theme="dark"] .content-panel,
+[data-theme="dark"] .glass-panel {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.92));
+}
+
+[data-theme="dark"] .el-table .table-row-warning td.el-table__cell {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.08), rgba(30, 41, 59, 0.6));
+}
+
+[data-theme="dark"] .el-table .table-row-danger td.el-table__cell {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08), rgba(30, 41, 59, 0.6));
+}
+
+[data-theme="dark"] .el-input__wrapper,
+[data-theme="dark"] .el-select__wrapper,
+[data-theme="dark"] .el-textarea__inner,
+[data-theme="dark"] .el-date-editor.el-input__wrapper {
+  background: var(--input-bg) !important;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.15) !important;
+}
+
+[data-theme="dark"] .el-input__wrapper.is-focus,
+[data-theme="dark"] .el-select__wrapper.is-focused {
+  box-shadow:
+    inset 0 0 0 1px rgba(59, 130, 246, 0.5) !important,
+    0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+}
+
 @media (max-width: 960px) {
   .hero-title {
     font-size: 28px;
@@ -517,7 +614,7 @@ a {
   .page-hero,
   .content-panel,
   .glass-panel {
-    border-radius: 18px;
+    border-radius: 12px;
   }
 
   .page-shell.compact-page {

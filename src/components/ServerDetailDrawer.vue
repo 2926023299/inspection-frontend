@@ -119,8 +119,8 @@ const diskBlocks = computed(() => {
   gap: 22px;
   padding: 24px;
   background:
-    radial-gradient(circle at top right, rgba(195, 95, 55, 0.08), transparent 24%),
-    linear-gradient(180deg, #f7f1e9 0%, #f4ede3 100%);
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.06), transparent 24%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 .drawer-header {
@@ -130,13 +130,13 @@ const diskBlocks = computed(() => {
   gap: 14px;
   padding: 20px;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(21, 32, 48, 0.96), rgba(28, 43, 63, 0.94));
-  color: #f5efe7;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.94));
+  color: #f1f5f9;
 }
 
 .drawer-eyebrow {
   margin: 0;
-  color: rgba(245, 239, 231, 0.66);
+  color: rgba(241, 245, 249, 0.66);
   font-size: 12px;
   letter-spacing: 0.12em;
 }
@@ -155,8 +155,8 @@ const diskBlocks = computed(() => {
 .drawer-section {
   padding: 18px;
   border-radius: 18px;
-  border: 1px solid rgba(30, 42, 51, 0.08);
-  background: rgba(255, 252, 247, 0.86);
+  border: 1px solid rgba(30, 41, 59, 0.08);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .drawer-section h3 {
@@ -174,7 +174,7 @@ const diskBlocks = computed(() => {
 .resource-card,
 .disk-row {
   border-radius: 16px;
-  border: 1px solid rgba(30, 42, 51, 0.08);
+  border: 1px solid rgba(30, 41, 59, 0.08);
   background: linear-gradient(180deg, rgba(255, 253, 249, 0.96), rgba(247, 241, 233, 0.92));
 }
 

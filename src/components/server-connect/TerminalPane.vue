@@ -218,7 +218,7 @@ async function removeBookmark(bookmark) {
 }
 
 .terminal-pane__bm-add:hover {
-  border-color: rgba(195, 95, 55, 0.5);
+  border-color: rgba(59, 130, 246, 0.5);
   color: rgba(240, 237, 231, 0.8);
 }
 

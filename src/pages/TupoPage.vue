@@ -144,7 +144,7 @@ function getCityTotal(city) {
   grid-column: 1 / -1;
   height: 8px;
   border-radius: 999px;
-  background: rgba(30, 42, 51, 0.08);
+  background: rgba(30, 41, 59, 0.08);
   overflow: hidden;
 }
 

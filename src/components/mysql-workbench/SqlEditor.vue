@@ -43,8 +43,8 @@ const mysqlEditorTheme = EditorView.theme({
   '&': {
     height: '100%',
     borderRadius: '18px',
-    backgroundColor: '#101a29',
-    color: '#f1e8dd',
+    backgroundColor: '#0f172a',
+    color: '#e2e8f0',
     overflow: 'hidden',
     fontSize: '13px',
   },
@@ -57,8 +57,8 @@ const mysqlEditorTheme = EditorView.theme({
     padding: '16px',
   },
   '.cm-gutters': {
-    backgroundColor: '#101a29',
-    color: 'rgba(241, 232, 221, 0.46)',
+    backgroundColor: '#0f172a',
+    color: 'rgba(226, 232, 240, 0.46)',
     border: 'none',
   },
   '.cm-activeLine': {
@@ -68,10 +68,10 @@ const mysqlEditorTheme = EditorView.theme({
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   '.cm-cursor': {
-    borderLeftColor: '#f1e8dd',
+    borderLeftColor: '#e2e8f0',
   },
   '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
-    backgroundColor: 'rgba(195, 95, 55, 0.32)',
+    backgroundColor: 'rgba(59, 130, 246, 0.3)',
   },
   // 自动补全弹出框样式
   '.cm-tooltip': {
@@ -88,7 +88,7 @@ const mysqlEditorTheme = EditorView.theme({
     },
     '& > ul > li': {
       padding: '4px 10px',
-      color: '#f1e8dd',
+      color: '#e2e8f0',
     },
     '& > ul > li[aria-selected]': {
       backgroundColor: 'rgba(92, 207, 230, 0.2)',

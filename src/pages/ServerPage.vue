@@ -347,7 +347,7 @@ watch(
 .server-toolbar__meta span {
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(30, 42, 51, 0.06);
+  background: rgba(30, 41, 59, 0.06);
   color: var(--text-subtle);
   font-size: 12px;
 }

@@ -126,8 +126,8 @@ async function handleLogout() {
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  border-radius: 14px;
-  background: rgba(23, 36, 55, 0.06);
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.04);
 }
 
 .tab-view__auth-copy {
@@ -154,10 +154,10 @@ async function handleLogout() {
 }
 
 :deep(.el-tabs__nav-scroll) {
-  padding: 6px;
-  border-radius: 16px;
-  background: rgba(250, 246, 238, 0.72);
-  border: 1px solid rgba(30, 42, 51, 0.08);
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(241, 245, 249, 0.8);
+  border: 1px solid rgba(30, 41, 59, 0.06);
 }
 
 :deep(.el-tabs__nav) {
@@ -165,19 +165,19 @@ async function handleLogout() {
 }
 
 :deep(.el-tabs__item) {
-  height: 36px;
+  height: 34px;
   border: none !important;
-  border-radius: 12px;
+  border-radius: 8px;
   color: var(--text-subtle);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 12px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 :deep(.el-tabs--card > .el-tabs__header .el-tabs__item.is-active) {
   color: var(--text-main);
   background: var(--panel-strong);
-  box-shadow: 0 10px 18px rgba(63, 55, 43, 0.08);
+  box-shadow: 0 2px 8px rgba(30, 41, 59, 0.06);
 }
 
 :deep(.el-tabs__item:hover) {

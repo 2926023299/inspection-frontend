@@ -255,8 +255,8 @@ async function copyText(text) {
   border-radius: 999px;
   font-size: 11px;
   font-weight: 500;
-  background: var(--brand-soft, rgba(195, 95, 55, 0.12));
-  color: var(--brand, #c35f37);
+  background: var(--brand-soft, rgba(59, 130, 246, 0.1));
+  color: var(--brand, #3b82f6);
 }
 
 .tool-card__actions {
@@ -282,7 +282,7 @@ async function copyText(text) {
 }
 
 .time-cell:hover {
-  background: var(--bg-hover, #f0ece6);
+  background: var(--bg-hover, #f1f5f9);
 }
 
 .time-cell--wide {
@@ -338,7 +338,7 @@ async function copyText(text) {
 }
 
 .result-item:hover {
-  background: var(--bg-hover, #f0ece6);
+  background: var(--bg-hover, #f1f5f9);
 }
 
 .result-label {
