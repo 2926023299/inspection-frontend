@@ -175,6 +175,93 @@ export function resolveMysqlExecutableSql({ sql = '', selectedSql = '' } = {}) {
   }
 }
 
+export function extractStatementAtLine(docText, lineNumber) {
+  const text = String(docText || '')
+  if (!text.trim()) return ''
+
+  const lines = text.split('\n')
+  if (lineNumber < 1 || lineNumber > lines.length) return ''
+
+  const statements = [] // { startLine, endLine, text }
+  let currentLines = []
+  let currentStartLine = 1
+  let inSingleQuote = false
+  let inDoubleQuote = false
+  let inBacktick = false
+  let inBlockComment = false
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx]
+    const lineNo = idx + 1
+    const trimmed = line.trim()
+
+    // 空行 → 关闭当前语句（如果已有内容）
+    if (!trimmed) {
+      if (currentLines.length > 0) {
+        statements.push({
+          startLine: currentStartLine,
+          endLine: lineNo - 1,
+          text: currentLines.join('\n'),
+        })
+        currentLines = []
+      }
+      currentStartLine = lineNo + 1
+      continue
+    }
+
+    currentLines.push(line)
+
+    // 逐字符扫描该行，检测分号终止符
+    let hasSemicolon = false
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      const next = i + 1 < line.length ? line[i + 1] : ''
+      const prev = i > 0 ? line[i - 1] : ''
+
+      if (inBlockComment) {
+        if (ch === '*' && next === '/') { inBlockComment = false; i++ }
+        continue
+      }
+
+      if (!inSingleQuote && !inDoubleQuote && !inBacktick) {
+        if (ch === '-' && next === '-') break
+        if (ch === '#') break
+        if (ch === '/' && next === '*') { inBlockComment = true; i++; continue }
+      }
+
+      if (ch === "'" && !inDoubleQuote && !inBacktick && prev !== '\\') inSingleQuote = !inSingleQuote
+      else if (ch === '"' && !inSingleQuote && !inBacktick && prev !== '\\') inDoubleQuote = !inDoubleQuote
+      else if (ch === '`' && !inSingleQuote && !inDoubleQuote) inBacktick = !inBacktick
+
+      if (ch === ';' && !inSingleQuote && !inDoubleQuote && !inBacktick) {
+        hasSemicolon = true
+      }
+    }
+
+    if (hasSemicolon) {
+      statements.push({
+        startLine: currentStartLine,
+        endLine: lineNo,
+        text: currentLines.join('\n'),
+      })
+      currentLines = []
+      currentStartLine = lineNo + 1
+    }
+  }
+
+  // 收尾：最后一条无分号的语句
+  if (currentLines.length > 0) {
+    statements.push({
+      startLine: currentStartLine,
+      endLine: lines.length,
+      text: currentLines.join('\n'),
+    })
+  }
+
+  const match = statements.find((s) => lineNumber >= s.startLine && lineNumber <= s.endLine)
+  return match ? match.text.trim() : ''
+}
+
 export function buildMysqlTableExportRequest({ schema, table, format, filters = [], sorts = [] }) {
   return {
     sourceType: 'TABLE',

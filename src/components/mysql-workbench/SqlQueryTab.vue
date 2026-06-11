@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import SqlEditor from './SqlEditor.vue'
 import VirtualResultTable from './VirtualResultTable.vue'
@@ -89,6 +89,12 @@ const DEFAULT_EDITOR_HEIGHT = 200
 const MIN_EDITOR_HEIGHT = 120
 const MIN_RESULTS_HEIGHT = 180
 const EDITOR_RESIZE_STEP = 24
+
+watch(isEditMode, (editing) => {
+  if (editing) {
+    nextTick(() => editorRef.value?.refresh?.())
+  }
+})
 
 let editorResizeCleanup = null
 
@@ -214,6 +220,12 @@ function handleSelectionChange(value) {
   selectedSql.value = value || ''
 }
 
+function handleExecuteStatement({ sql }) {
+  if (!sql) return
+  flushSql()
+  emit('execute', { sqlOverride: sql, usedSelection: false })
+}
+
 function buildExecutePayload() {
   if (!isEditMode.value) {
     return {
@@ -312,7 +324,7 @@ defineExpose({ flushSql })
       class="content-panel compact-main-panel mysql-query-panel"
       :class="{ 'is-focus': isResultFocusMode, 'is-resizing-editor': isResizingEditor }"
     >
-      <div v-if="isEditMode" class="mysql-query-editor" :style="editorHeightStyle">
+      <div v-show="isEditMode" class="mysql-query-editor" :style="editorHeightStyle">
         <SqlEditor
           ref="editorRef"
           :model-value="tab.sql"
@@ -321,6 +333,7 @@ defineExpose({ flushSql })
           :load-table-columns="loadTableColumns"
           @update:model-value="$emit('change-sql', $event)"
           @selection-change="handleSelectionChange"
+          @execute-statement="handleExecuteStatement"
         />
       </div>
 

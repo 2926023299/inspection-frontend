@@ -5,9 +5,9 @@ import { EditorView, basicSetup } from 'codemirror'
 import { MySQL, keywordCompletionSource, schemaCompletionSource, sql } from '@codemirror/lang-sql'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { autocompletion } from '@codemirror/autocomplete'
-import { tooltips } from '@codemirror/view'
+import { tooltips, gutter, GutterMarker } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
-import { createDebouncedSqlSync } from '@/utils/mysqlWorkbench'
+import { createDebouncedSqlSync, extractStatementAtLine } from '@/utils/mysqlWorkbench'
 
 const props = defineProps({
   modelValue: {
@@ -28,7 +28,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:modelValue', 'selection-change'])
+const emit = defineEmits(['update:modelValue', 'selection-change', 'execute-statement'])
 
 const editorHost = ref(null)
 let editorView = null
@@ -105,6 +105,42 @@ const mysqlEditorTheme = EditorView.theme({
   },
   '.cm-completionIcon': {
     color: '#5ccfe6',
+  },
+  // 运行按钮 gutter
+  '.cm-run-gutter': {
+    width: '24px',
+  },
+  '.cm-run-gutter .cm-gutterElement': {
+    position: 'relative',
+    cursor: 'pointer',
+  },
+  '.cm-run-gutter-btn': {
+    position: 'absolute',
+    left: '4px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    opacity: '0',
+    color: '#5ccfe6',
+    transition: 'opacity 0.15s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '16px',
+    height: '16px',
+    borderRadius: '4px',
+  },
+  '.cm-run-gutter:hover .cm-run-gutter-btn': {
+    opacity: '0.7',
+  },
+  '.cm-run-gutter .cm-gutterElement:hover .cm-run-gutter-btn': {
+    opacity: '1',
+    backgroundColor: 'rgba(92, 207, 230, 0.15)',
+  },
+  '.cm-activeLineGutter .cm-run-gutter-btn': {
+    opacity: '0.35',
+  },
+  '.cm-activeLineGutter:hover .cm-run-gutter-btn': {
+    opacity: '0.7',
   },
 })
 
@@ -316,6 +352,42 @@ function updateSelectedSql() {
   emit('selection-change', selectedSql)
 }
 
+const RUN_GUTTER_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M4 2l10 6-10 6V2z"/></svg>'
+
+class RunGutterMarker extends GutterMarker {
+  toDOM() {
+    const el = document.createElement('div')
+    el.className = 'cm-run-gutter-btn'
+    el.innerHTML = RUN_GUTTER_SVG
+    return el
+  }
+}
+
+function createRunGutter(onRun) {
+  return gutter({
+    class: 'cm-run-gutter',
+    lineMarker: () => new RunGutterMarker(),
+    initialSpacer: () => new RunGutterMarker(),
+    domEventHandlers: {
+      click(view, line, event) {
+        const btn = event.target.closest('.cm-run-gutter-btn')
+        if (!btn) return false
+        const lineNo = view.state.doc.lineAt(line.from).number
+        onRun(lineNo)
+        return true
+      },
+    },
+  })
+}
+
+function handleRunGutterClick(lineNumber) {
+  if (!editorView) return
+  const docText = editorView.state.doc.toString()
+  const sql = extractStatementAtLine(docText, lineNumber)
+  if (!sql) return
+  emit('execute-statement', { sql })
+}
+
 onMounted(() => {
   const sqlExts = createSqlExtension(props.schema, props.defaultSchema)
   const tooltipParent = editorHost.value?.ownerDocument?.body || document.body
@@ -330,6 +402,7 @@ onMounted(() => {
         EditorView.lineWrapping,
         mysqlEditorTheme,
         syntaxHighlighting(sqlHighlightStyle),
+        createRunGutter(handleRunGutterClick),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             sync.setValue(update.state.doc.toString())

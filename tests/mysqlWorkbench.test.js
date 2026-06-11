@@ -21,6 +21,7 @@ import {
   patchMysqlTableDataState,
   setMysqlQueryEditMode,
   setMysqlQueryResultFocusMode,
+  extractStatementAtLine,
 } from '../src/utils/mysqlWorkbench.js'
 
 test('saved query tabs map back to the saved-query tree key', () => {
@@ -371,4 +372,41 @@ test('table design execution error summarizes failed statement detail', () => {
     }),
     '语句 2 执行失败：字段已存在；Duplicate column name id',
   )
+})
+
+test('extractStatementAtLine returns single-line statement at cursor', () => {
+  const doc = 'SELECT 1;\nSELECT 2;'
+  assert.equal(extractStatementAtLine(doc, 1), 'SELECT 1;')
+  assert.equal(extractStatementAtLine(doc, 2), 'SELECT 2;')
+})
+
+test('extractStatementAtLine returns multi-line statement delimited by semicolon', () => {
+  const doc = 'SELECT *\nFROM users\nWHERE id = 1;\nSELECT 2;'
+  assert.equal(extractStatementAtLine(doc, 1), 'SELECT *\nFROM users\nWHERE id = 1;')
+  assert.equal(extractStatementAtLine(doc, 2), 'SELECT *\nFROM users\nWHERE id = 1;')
+  assert.equal(extractStatementAtLine(doc, 3), 'SELECT *\nFROM users\nWHERE id = 1;')
+  assert.equal(extractStatementAtLine(doc, 4), 'SELECT 2;')
+})
+
+test('extractStatementAtLine treats empty line as statement separator', () => {
+  const doc = 'SELECT 1\n\nSELECT 2'
+  assert.equal(extractStatementAtLine(doc, 1), 'SELECT 1')
+  assert.equal(extractStatementAtLine(doc, 2), '')
+  assert.equal(extractStatementAtLine(doc, 3), 'SELECT 2')
+})
+
+test('extractStatementAtLine handles semicolons inside string literals', () => {
+  const doc = "SELECT 'a;b' FROM t;"
+  assert.equal(extractStatementAtLine(doc, 1), "SELECT 'a;b' FROM t;")
+})
+
+test('extractStatementAtLine handles trailing statement without semicolon', () => {
+  const doc = 'SELECT 1;\nSELECT 2'
+  assert.equal(extractStatementAtLine(doc, 2), 'SELECT 2')
+})
+
+test('extractStatementAtLine returns empty for blank document or out-of-range line', () => {
+  assert.equal(extractStatementAtLine('', 1), '')
+  assert.equal(extractStatementAtLine('SELECT 1;', 0), '')
+  assert.equal(extractStatementAtLine('SELECT 1;', 5), '')
 })
